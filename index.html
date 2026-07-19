@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的主页</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="bg-particles" id="particles"></div>
+
+    <nav class="navbar">
+        <div class="nav-logo">My Home</div>
+        <div class="nav-links">
+            <a href="#home" class="active">首页</a>
+            <a href="#links">导航</a>
+            <a href="#about">关于</a>
+        </div>
+    </nav>
+
+    <header id="home" class="hero">
+        <div class="hero-content">
+            <div class="avatar" id="avatar">
+                <div class="avatar-inner">
+                    <img src="assets/images/avatar.jpg" alt="头像">
+                </div>
+                <div class="avatar-ring"></div>
+                <div class="avatar-reaction" id="reaction"></div>
+            </div>
+            <h1 class="hero-title">Hi, 这是我的小窝</h1>
+            <p class="hero-sub">在网上安了一个家，慢慢折腾中</p>
+            <div class="scroll-hint">
+                <span>向下看</span>
+                <div class="scroll-arrow"></div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section id="links" class="section">
+            <h2 class="section-title">我的导航</h2>
+            <div class="links-grid">
+                <a href="https://github.com" target="_blank" class="link-card" style="--hue: 330;">
+                    <div class="link-icon">01</div>
+                    <div class="link-info">
+                        <h3>GitHub</h3>
+                        <p>代码都在这里</p>
+                    </div>
+                </a>
+                <a href="#" class="link-card" style="--hue: 270;">
+                    <div class="link-icon">02</div>
+                    <div class="link-info">
+                        <h3>项目</h3>
+                        <p>做过的和正在做的</p>
+                    </div>
+                </a>
+                <a href="#" class="link-card" style="--hue: 300;">
+                    <div class="link-icon">03</div>
+                    <div class="link-info">
+                        <h3>收藏</h3>
+                        <p>觉得好用的东西</p>
+                    </div>
+                </a>
+                <a href="#" class="link-card" style="--hue: 350;">
+                    <div class="link-icon">04</div>
+                    <div class="link-info">
+                        <h3>相册</h3>
+                        <p>存点图</p>
+                    </div>
+                </a>
+                <a href="#" class="link-card" style="--hue: 280;">
+                    <div class="link-icon">05</div>
+                    <div class="link-info">
+                        <h3>工具</h3>
+                        <p>在线小工具</p>
+                    </div>
+                </a>
+                <a href="#" class="link-card" style="--hue: 310;">
+                    <div class="link-icon">06</div>
+                    <div class="link-info">
+                        <h3>留言</h3>
+                        <p>随便说点啥</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <section id="about" class="section">
+            <h2 class="section-title">关于我</h2>
+            <div class="about-card">
+                <div class="about-avatar">
+                    <div class="avatar-inner large">
+                        <img src="assets/images/avatar.jpg" alt="头像">
+                    </div>
+                </div>
+                <div class="about-text">
+                    <h3>你好呀</h3>
+                    <p>一个喜欢可爱东西的人，在网上给自己搭了个小窝。这个网站以后会慢慢变出各种各样的东西来，先占个坑。</p>
+                    <div class="tags">
+                        <span class="tag">在建中</span>
+                        <span class="tag">慢慢来</span>
+                        <span class="tag">随便折腾</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 My Home &middot; 慢慢搭建中</p>
+    </footer>
+
+    <script>
+        const container = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'particle';
+            dot.style.left = Math.random() * 100 + '%';
+            dot.style.animationDuration = 6 + Math.random() * 10 + 's';
+            dot.style.animationDelay = Math.random() * 8 + 's';
+            dot.style.width = dot.style.height = 2 + Math.random() * 4 + 'px';
+            container.appendChild(dot);
+        }
+
+        const sections = document.querySelectorAll('.section');
+        const navLinks = document.querySelectorAll('.nav-links a');
+
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.15 });
+
+        sections.forEach(s => observer.observe(s));
+
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY + 120;
+            sections.forEach(section => {
+                const top = section.offsetTop;
+                const height = section.offsetHeight;
+                const id = section.getAttribute('id');
+                if (scrollY >= top && scrollY < top + height) {
+                    navLinks.forEach(a => {
+                        a.classList.remove('active');
+                        if (a.getAttribute('href') === '#' + id) a.classList.add('active');
+                    });
+                }
+            });
+        });
+
+        const avatar = document.getElementById('avatar');
+        const reaction = document.getElementById('reaction');
+        const reactions = ['٩(◕‿◕｡)۶', '(◕ᴗ◕✿)', '(◕ω◕)', '(◍•ᴗ•◍)❤', '(✿◠‿◠)', '(◕‿◕)♡', '(◠‿・)—☆', '(◕‸◕)', '(◡‿◡✿)'];
+        let clickCount = 0;
+        let spinChance = 0.1;
+        let achievementShown = false;
+
+        function showAchievement() {
+            const ach = document.createElement('div');
+            ach.className = 'achievement';
+            ach.innerHTML = `
+                <div class="achievement-icon">
+                    <img src="assets/images/金pp.gif" alt="">
+                </div>
+                <div class="achievement-text">
+                    <span class="achievement-label">成就解锁</span>
+                    <span class="achievement-name">哎呀，被你发现了</span>
+                </div>
+                <div class="achievement-sparkle">✦</div>`;
+            document.body.appendChild(ach);
+            requestAnimationFrame(() => ach.classList.add('show'));
+            setTimeout(() => {
+                ach.classList.remove('show');
+                setTimeout(() => ach.remove(), 600);
+            }, 3000);
+        }
+
+        avatar.addEventListener('click', () => {
+            clickCount++;
+            avatar.classList.remove('avatar-bounce');
+            void avatar.offsetWidth;
+            avatar.classList.add('avatar-bounce');
+
+            reaction.textContent = reactions[Math.floor(Math.random() * reactions.length)];
+            reaction.classList.remove('reaction-pop');
+            void reaction.offsetWidth;
+            reaction.classList.add('reaction-pop');
+
+            if (Math.random() < spinChance) {
+                avatar.classList.add('avatar-spin');
+                setTimeout(() => avatar.classList.remove('avatar-spin'), 800);
+                if (!achievementShown) {
+                    showAchievement();
+                    achievementShown = true;
+                }
+            }
+            if (clickCount % 10 === 0) {
+                spinChance = Math.min(spinChance + 0.1, 1.0);
+                if (spinChance >= 1.0) {
+                    setTimeout(() => { spinChance = 0.1; }, 500);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
