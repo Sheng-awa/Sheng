@@ -1,209 +1,166 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的主页</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>小圣的小窝 ✿</title>
+  <meta name="description" content="小圣的个人小角落——软乎乎、慢悠悠、很舒服。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
-    <div class="bg-particles" id="particles"></div>
+  <!-- 飘落的花瓣层（JS 生成，尊重减少动态偏好） -->
+  <div class="petal-layer" id="petalLayer" aria-hidden="true"></div>
 
-    <nav class="navbar">
-        <div class="nav-logo">My Home</div>
-        <div class="nav-links">
-            <a href="#home" class="active">首页</a>
-            <a href="#links">导航</a>
-            <a href="#about">关于</a>
+  <!-- 特效画布：粉色鼠标轨迹 + 飘雪 -->
+  <canvas class="fx-canvas" id="fxCanvas" aria-hidden="true"></canvas>
+
+  <!-- 导航（GitHub 风格：左侧 logo + 链接，右侧操作；宽屏为可伸缩侧边栏） -->
+  <header class="nav" id="nav">
+    <div class="nav__left">
+      <div class="nav__header">
+        <a class="nav__logo" href="#top"><span class="nav__logo-mark">✿</span><span class="nav__logo-text">小圣的小窝</span></a>
+        <button class="nav__collapse" id="navCollapse" aria-label="收起 / 展开侧边栏" title="收起 / 展开">
+          <span class="nav__collapse-icon">«</span>
+        </button>
+      </div>
+      <nav class="nav__links">
+        <a href="#about"><span class="nav__icon">❀</span><span class="nav__text">关于</span></a>
+        <a href="#likes"><span class="nav__icon">♥</span><span class="nav__text">喜好</span></a>
+        <a href="#corner"><span class="nav__icon">✦</span><span class="nav__text">小角落</span></a>
+        <a href="#contact"><span class="nav__icon">✉</span><span class="nav__text">联系</span></a>
+      </nav>
+    </div>
+    <button class="theme-toggle" id="themeToggle" aria-label="切换明暗主题" title="切换主题">
+      <span class="theme-toggle__icon">☾</span>
+    </button>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero__inner">
+        <div class="hero__avatar-wrap reveal">
+          <div class="hero__avatar-ring"></div>
+          <img class="hero__avatar" id="avatar" src="assets/img/avatar.jpg" alt="小圣的头像" title="点我有惊喜 ✿" />
         </div>
-    </nav>
-
-    <header id="home" class="hero">
-        <div class="hero-content">
-            <div class="avatar" id="avatar">
-                <div class="avatar-inner">
-                    <img src="assets/images/avatar.jpg" alt="头像">
-                </div>
-                <div class="avatar-ring"></div>
-                <div class="avatar-reaction" id="reaction"></div>
-            </div>
-            <h1 class="hero-title">Hi, 这是我的小窝</h1>
-            <p class="hero-sub">在网上安了一个家，慢慢折腾中</p>
-            <div class="scroll-hint">
-                <span>向下看</span>
-                <div class="scroll-arrow"></div>
-            </div>
+        <h1 class="hero__title reveal" style="--d:.12s">你好呀，我是<span class="hero__name">小圣</span></h1>
+        <p class="hero__subtitle reveal" style="--d:.24s">男娘一枚，正在慢慢成为自己喜欢的样子 ✿</p>
+        <p class="hero__desc reveal" style="--d:.36s">
+          欢迎来到我的小角落。<br />
+          这里很软、很慢、很舒服，坐下来歇一会儿吧。
+        </p>
+        <div class="hero__actions reveal" style="--d:.48s">
+          <a class="btn btn--primary" href="#about">认识我一下</a>
+          <a class="btn btn--ghost" href="#contact">来找我玩</a>
         </div>
-    </header>
+      </div>
+      <a class="hero__scroll-hint" href="#about" aria-label="向下滚动">
+        <span></span>
+      </a>
+    </section>
 
-    <main>
-        <section id="links" class="section">
-            <h2 class="section-title">我的导航</h2>
-            <div class="links-grid">
-                <a href="https://github.com" target="_blank" class="link-card" style="--hue: 330;">
-                    <div class="link-icon">01</div>
-                    <div class="link-info">
-                        <h3>GitHub</h3>
-                        <p>代码都在这里</p>
-                    </div>
-                </a>
-                <a href="#" class="link-card" style="--hue: 270;">
-                    <div class="link-icon">02</div>
-                    <div class="link-info">
-                        <h3>项目</h3>
-                        <p>做过的和正在做的</p>
-                    </div>
-                </a>
-                <a href="#" class="link-card" style="--hue: 300;">
-                    <div class="link-icon">03</div>
-                    <div class="link-info">
-                        <h3>收藏</h3>
-                        <p>觉得好用的东西</p>
-                    </div>
-                </a>
-                <a href="#" class="link-card" style="--hue: 350;">
-                    <div class="link-icon">04</div>
-                    <div class="link-info">
-                        <h3>相册</h3>
-                        <p>存点图</p>
-                    </div>
-                </a>
-                <a href="#" class="link-card" style="--hue: 280;">
-                    <div class="link-icon">05</div>
-                    <div class="link-info">
-                        <h3>工具</h3>
-                        <p>在线小工具</p>
-                    </div>
-                </a>
-                <a href="#" class="link-card" style="--hue: 310;">
-                    <div class="link-icon">06</div>
-                    <div class="link-info">
-                        <h3>留言</h3>
-                        <p>随便说点啥</p>
-                    </div>
-                </a>
-            </div>
-        </section>
+    <!-- 关于我 -->
+    <section class="section" id="about">
+      <div class="container">
+        <h2 class="section__title reveal">关于我</h2>
+        <div class="about__card reveal" style="--d:.1s">
+          <p>
+            我是小圣，一个喜欢可爱东西的人，在网上给自己搭了个小窝。
+          </p>
+          <p>
+            身体是男孩子，心里住着一个小姑娘。
+            正在按照自己的节奏，一点一点地靠近理想中的自己——不急，慢慢来。
+          </p>
+          <p>
+            平时喜欢折腾代码、玩玩游戏、收集一切软乎乎粉嘟嘟的小东西。
+            这个网站以后也会慢慢变出各种各样的东西来，先占个坑 ✿
+          </p>
+          <div class="about__tags">
+            <span class="tag">🏳️‍⚧️ 做自己</span>
+            <span class="tag">✿ 可爱即正义</span>
+            <span class="tag">☾ 夜猫子</span>
+            <span class="tag">⌨ 喜欢折腾</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
-        <section id="about" class="section">
-            <h2 class="section-title">关于我</h2>
-            <div class="about-card">
-                <div class="about-avatar">
-                    <div class="avatar-inner large">
-                        <img src="assets/images/avatar.jpg" alt="头像">
-                    </div>
-                </div>
-                <div class="about-text">
-                    <h3>你好呀</h3>
-                    <p>一个喜欢可爱东西的人，在网上给自己搭了个小窝。这个网站以后会慢慢变出各种各样的东西来，先占个坑。</p>
-                    <div class="tags">
-                        <span class="tag">在建中</span>
-                        <span class="tag">慢慢来</span>
-                        <span class="tag">随便折腾</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
+    <!-- 喜好 -->
+    <section class="section section--alt" id="likes">
+      <div class="container">
+        <h2 class="section__title reveal">喜欢的东西</h2>
+        <div class="likes__grid">
+          <article class="like-card reveal" style="--d:.05s">
+            <div class="like-card__icon">🌸</div>
+            <h3>可爱的东西</h3>
+            <p>粉色、毛绒、蝴蝶结、小裙子……一切软乎乎的东西都能治愈我。</p>
+          </article>
+          <article class="like-card reveal" style="--d:.15s">
+            <div class="like-card__icon">💻</div>
+            <h3>折腾代码</h3>
+            <p>给自己写点小工具、搭个小网站，看着想法一点点变成现实最开心了。</p>
+          </article>
+          <article class="like-card reveal" style="--d:.25s">
+            <div class="like-card__icon">🎮</div>
+            <h3>游戏</h3>
+            <p>闲暇时玩一玩游戏，在别的世界里冒冒险、种种田、看看风景。</p>
+          </article>
+          <article class="like-card reveal" style="--d:.35s">
+            <div class="like-card__icon">🛏️</div>
+            <h3>睡个好觉</h3>
+            <p>窝在被子里什么都不想，是世界上最简单也最幸福的事之一。</p>
+          </article>
+        </div>
+      </div>
+    </section>
 
-    <footer>
-        <p>&copy; 2026 My Home &middot; 慢慢搭建中</p>
-    </footer>
+    <!-- 小角落（占位，以后慢慢加东西） -->
+    <section class="section" id="corner">
+      <div class="container">
+        <h2 class="section__title reveal">小角落</h2>
+        <div class="corner__card reveal" style="--d:.1s">
+          <div class="corner__wip">🚧</div>
+          <h3>在建中，慢慢来</h3>
+          <p>
+            这里以后会长出各种各样的东西：可能是博客、相册、小工具，也可能是日记本。<br />
+            随便折腾，不着急。
+          </p>
+        </div>
+      </div>
+    </section>
 
-    <script>
-        const container = document.getElementById('particles');
-        for (let i = 0; i < 30; i++) {
-            const dot = document.createElement('div');
-            dot.className = 'particle';
-            dot.style.left = Math.random() * 100 + '%';
-            dot.style.animationDuration = 6 + Math.random() * 10 + 's';
-            dot.style.animationDelay = Math.random() * 8 + 's';
-            dot.style.width = dot.style.height = 2 + Math.random() * 4 + 'px';
-            container.appendChild(dot);
-        }
+    <!-- 联系 -->
+    <section class="section section--alt" id="contact">
+      <div class="container">
+        <h2 class="section__title reveal">来找我玩</h2>
+        <div class="contact__list reveal" style="--d:.1s">
+          <a class="contact__item" href="https://github.com/Sheng-awa" target="_blank" rel="noopener">
+            <span class="contact__icon">⌥</span>
+            <span class="contact__label">GitHub</span>
+            <span class="contact__value">@Sheng-awa</span>
+          </a>
+          <a class="contact__item" href="mailto:ShnegQwQ@outlook.com">
+            <span class="contact__icon">✉</span>
+            <span class="contact__label">邮箱</span>
+            <span class="contact__value">ShnegQwQ@outlook.com</span>
+          </a>
+          <a class="contact__item" href="https://sheng-awa.top" target="_blank" rel="noopener">
+            <span class="contact__icon">✿</span>
+            <span class="contact__label">小窝</span>
+            <span class="contact__value">sheng-awa.top</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
 
-        const sections = document.querySelectorAll('.section');
-        const navLinks = document.querySelectorAll('.nav-links a');
+  <footer class="footer">
+    <p>© <span id="year"></span> 小圣 · 用 ✿ 和一点点代码织成的小窝</p>
+  </footer>
 
-        const observer = new IntersectionObserver(entries => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
-            });
-        }, { threshold: 0.15 });
-
-        sections.forEach(s => observer.observe(s));
-
-        window.addEventListener('scroll', () => {
-            const scrollY = window.scrollY + 120;
-            sections.forEach(section => {
-                const top = section.offsetTop;
-                const height = section.offsetHeight;
-                const id = section.getAttribute('id');
-                if (scrollY >= top && scrollY < top + height) {
-                    navLinks.forEach(a => {
-                        a.classList.remove('active');
-                        if (a.getAttribute('href') === '#' + id) a.classList.add('active');
-                    });
-                }
-            });
-        });
-
-        const avatar = document.getElementById('avatar');
-        const reaction = document.getElementById('reaction');
-        const reactions = ['٩(◕‿◕｡)۶', '(◕ᴗ◕✿)', '(◕ω◕)', '(◍•ᴗ•◍)❤', '(✿◠‿◠)', '(◕‿◕)♡', '(◠‿・)—☆', '(◕‸◕)', '(◡‿◡✿)'];
-        let clickCount = 0;
-        let spinChance = 0.1;
-        let achievementShown = false;
-
-        function showAchievement() {
-            const ach = document.createElement('div');
-            ach.className = 'achievement';
-            ach.innerHTML = `
-                <div class="achievement-icon">
-                    <img src="assets/images/金pp.gif" alt="">
-                </div>
-                <div class="achievement-text">
-                    <span class="achievement-label">成就解锁</span>
-                    <span class="achievement-name">哎呀，被你发现了</span>
-                </div>
-                <div class="achievement-sparkle">✦</div>`;
-            document.body.appendChild(ach);
-            requestAnimationFrame(() => ach.classList.add('show'));
-            setTimeout(() => {
-                ach.classList.remove('show');
-                setTimeout(() => ach.remove(), 600);
-            }, 3000);
-        }
-
-        avatar.addEventListener('click', () => {
-            clickCount++;
-            avatar.classList.remove('avatar-bounce');
-            void avatar.offsetWidth;
-            avatar.classList.add('avatar-bounce');
-
-            reaction.textContent = reactions[Math.floor(Math.random() * reactions.length)];
-            reaction.classList.remove('reaction-pop');
-            void reaction.offsetWidth;
-            reaction.classList.add('reaction-pop');
-
-            if (Math.random() < spinChance) {
-                avatar.classList.add('avatar-spin');
-                setTimeout(() => avatar.classList.remove('avatar-spin'), 800);
-                if (!achievementShown) {
-                    showAchievement();
-                    achievementShown = true;
-                }
-            }
-            if (clickCount % 10 === 0) {
-                spinChance = Math.min(spinChance + 0.1, 1.0);
-                if (spinChance >= 1.0) {
-                    setTimeout(() => { spinChance = 0.1; }, 500);
-                }
-            }
-        });
-    </script>
+  <script src="assets/js/main.js"></script>
 </body>
 </html>
