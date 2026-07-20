@@ -1008,3 +1008,370 @@ body.music-page .theme-toggle {
 /* 壁纸页强制深色导航观感 */
 body.music-page .nav__logo-text,
 body.music-page .nav__text { color: inherit; }
+
+/* ============================================================
+   听歌 + 专注页：动态壁纸场景（Wallpaper Engine 分层重建）
+   - 舞台固定为 3840×2160（原壁纸场景空间），JS 按 cover 规则缩放
+   - 各层按原 scene.json 坐标摆放，视差由 focus.js 平移 wrapper，
+     CSS 动画只作用在内部 img 上，两者互不冲突
+   ============================================================ */
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: #16222e;
+}
+
+.scene__stage {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3840px;
+  height: 2160px;
+  transform: translate(-50%, -50%) scale(0.5); /* JS 会覆写 scale */
+}
+
+.scene__layer { position: absolute; will-change: transform; }
+.scene__layer img { display: block; width: 100%; height: auto; }
+
+/* 天空外扩一圈，视差移动时不露边 */
+.scene__layer--sky { inset: -60px; }
+.scene__layer--sky img { width: 100%; height: 100%; object-fit: cover; }
+
+/* 坐标 = 原壁纸 scene.json（中心锚定已换算为左上） */
+.scene__layer--buildings { left: -92px; top: 360px; width: 3971px; }
+.scene__layer--railing { left: -184px; top: -114px; width: 4200px; }
+.scene__layer--curtain { left: 2152px; top: 144px; width: 2850px; }
+.scene__layer--girl { left: 1266px; top: 246px; width: 1532px; }
+.scene__layer--chair { left: 2586px; top: -162px; width: 2312px; }
+.scene__layer--bag { left: -1163px; top: -297px; width: 3302px; }
+
+/* 少女呼吸 / 窗帘摆动 / 吊椅轻晃 */
+.anim-breathe { transform-origin: 50% 100%; animation: girl-breathe 4.6s ease-in-out infinite; }
+@keyframes girl-breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.014); } }
+
+.anim-sway { transform-origin: 50% 0; animation: curtain-sway 7.5s ease-in-out infinite; }
+@keyframes curtain-sway { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1.1deg); } }
+
+.anim-swing { transform-origin: 50% 0; animation: chair-swing 6.4s ease-in-out infinite; }
+@keyframes chair-swing { 0%, 100% { transform: rotate(0.8deg); } 50% { transform: rotate(-0.8deg); } }
+
+/* 闪烁星星（focus.js 生成） */
+.scene__stars { position: absolute; inset: 0; }
+.scene__stars i {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.15;
+  animation: star-twinkle 3s ease-in-out infinite;
+}
+@keyframes star-twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.95; } }
+
+/* 流星：大部分时间透明，一小段划过 */
+.scene__meteor {
+  position: absolute;
+  top: 14%;
+  left: 22%;
+  width: 220px;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), transparent);
+  opacity: 0;
+  transform: rotate(-32deg);
+  animation: meteor-fall 8s linear infinite;
+}
+@keyframes meteor-fall {
+  0% { opacity: 0; transform: rotate(-32deg) translateX(0); }
+  1.5% { opacity: 1; }
+  7% { opacity: 0; transform: rotate(-32deg) translateX(-560px); }
+  100% { opacity: 0; transform: rotate(-32deg) translateX(-560px); }
+}
+
+/* 压暗层减轻一点，让夜景透出来（面板自带玻璃底保证可读） */
+body.music-page::before { background: rgba(14, 20, 32, 0.22); }
+
+/* ---------- 左上角头像（回首页） ---------- */
+.focus-avatar {
+  position: fixed;
+  top: 22px;
+  left: 22px;
+  z-index: 20;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+  transition: transform var(--speed) var(--ease);
+}
+.focus-avatar:hover { transform: scale(1.08) rotate(-3deg); }
+.focus-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+/* ---------- 液态玻璃面板公共观感 ---------- */
+body.music-page .focus-left,
+body.music-page .focus-player {
+  background: rgba(24, 32, 48, 0.38);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+  color: #f4eef3;
+}
+
+.focus-wrap { display: contents; }
+
+/* ---------- 左下：专注 + TODO ---------- */
+body.music-page .focus-left {
+  position: fixed;
+  left: 28px;
+  bottom: 28px;
+  z-index: 10;
+  width: 320px;
+  padding: 20px 20px 16px;
+}
+
+.focus-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 2px 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: rgba(244, 238, 243, 0.62);
+}
+
+.focus-status, .focus-hint { font-weight: 600; font-size: 0.74rem; color: rgba(255, 196, 218, 0.75); }
+
+.focus-clock {
+  margin: 0 0 12px;
+  text-align: center;
+  font-size: 2.9rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #fdf7fb;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+}
+
+.focus-clock.is-done { animation: clock-pop 0.8s var(--ease) 3; }
+@keyframes clock-pop { 50% { transform: scale(1.07); } }
+
+.focus-presets { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+.focus-presets button {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: #efe8ee;
+  border-radius: 999px;
+  padding: 4px 13px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color var(--speed) var(--ease), transform var(--speed) var(--ease);
+}
+.focus-presets button:hover { transform: translateY(-1px); }
+.focus-presets button.is-on {
+  background: linear-gradient(135deg, var(--accent), var(--lavender));
+  border-color: transparent;
+  color: #fff;
+}
+
+.focus-actions { display: flex; gap: 10px; }
+.focus-start, .focus-reset {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 0;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.92rem;
+  cursor: pointer;
+  transition: transform var(--speed) var(--ease), opacity var(--speed) var(--ease);
+}
+.focus-start {
+  background: linear-gradient(135deg, var(--accent), var(--lavender));
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(242, 167, 195, 0.35);
+}
+.focus-reset { background: rgba(255, 255, 255, 0.12); color: #ffd7e8; }
+.focus-start:hover, .focus-reset:hover { transform: translateY(-2px); }
+
+.focus-todo { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.14); }
+
+.todo-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  max-height: 168px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+.todo-list li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 8px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #efe8ee;
+  cursor: pointer;
+  transition: background-color var(--speed) var(--ease);
+}
+.todo-list li:hover { background: rgba(255, 255, 255, 0.08); }
+.todo-list li::before {
+  content: '';
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 196, 218, 0.65);
+  transition: background-color var(--speed) var(--ease);
+}
+.todo-list li.is-done::before { background: var(--accent); border-color: var(--accent); }
+.todo-list li.is-done .todo-text { text-decoration: line-through; opacity: 0.5; }
+.todo-list .todo-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo-list .todo-del {
+  border: none;
+  background: none;
+  color: rgba(244, 238, 243, 0.45);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0;
+  transition: opacity var(--speed) var(--ease);
+}
+.todo-list li:hover .todo-del { opacity: 1; }
+.todo-list .todo-empty {
+  cursor: default;
+  color: rgba(244, 238, 243, 0.45);
+  font-weight: 600;
+  font-size: 0.84rem;
+}
+.todo-list .todo-empty::before { display: none; }
+.todo-list .todo-empty:hover { background: none; }
+
+.todo-form { display: flex; gap: 8px; }
+.todo-form input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: #fdf7fb;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 0.86rem;
+  outline: none;
+  transition: border-color var(--speed) var(--ease);
+}
+.todo-form input::placeholder { color: rgba(253, 247, 251, 0.42); }
+.todo-form input:focus { border-color: var(--accent); }
+.todo-form button {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--lavender));
+  color: #fff;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: transform var(--speed) var(--ease);
+}
+.todo-form button:hover { transform: scale(1.1); }
+
+/* ---------- 右下：迷你播放器（复用 .player 玻璃样式，做紧凑覆写） ---------- */
+body.music-page .focus-player {
+  position: fixed;
+  right: 28px;
+  bottom: 28px;
+  z-index: 10;
+  width: 350px;
+  max-width: none;
+  margin: 0;
+  padding: 18px;
+  text-align: left;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.focus-player__top { display: flex; align-items: center; gap: 13px; margin-bottom: 10px; }
+.focus-player .player__disc { width: 72px; height: 72px; margin: 0; border-width: 4px; flex: none; }
+.focus-player .player__info { min-width: 0; }
+.focus-player .player__info h3 {
+  margin: 0;
+  font-size: 1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.focus-player .player__info p { margin: 2px 0 0; font-size: 0.8rem; }
+.focus-player .player__lyric {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.focus-player .player__viz { height: 34px; margin-bottom: 6px; }
+.focus-player .player__times { margin-bottom: 10px; }
+
+.focus-player__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.focus-player .player__controls { gap: 12px; margin-bottom: 0; }
+.focus-player .player__btn { width: 36px; height: 36px; font-size: 0.9rem; }
+.focus-player .player__btn--main { width: 46px; height: 46px; font-size: 1.1rem; }
+.focus-player .player__volume { margin-bottom: 0; }
+.focus-player .player__volume input { width: 72px; }
+
+/* 歌单折叠区 */
+.player__more { margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.14); padding-top: 10px; }
+.player__more summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: rgba(244, 238, 243, 0.62);
+  list-style: none;
+  text-align: center;
+}
+.player__more summary::-webkit-details-marker { display: none; }
+.player__more summary::after { content: ' ▾'; }
+.player__more[open] summary::after { content: ' ▴'; }
+.player__more .music__loader { margin: 12px 0 10px; max-width: none; }
+.player__more .music__loader input { padding: 8px 14px; font-size: 0.82rem; }
+.player__more .music__loader button { padding: 8px 14px; font-size: 0.82rem; }
+.player__more .player__list { max-height: 200px; }
+.player__more .player__credit { margin-top: 12px; font-size: 0.72rem; }
+
+/* ---------- 小屏：面板退回普通流，上下排列 ---------- */
+@media (max-width: 860px) {
+  .focus-wrap {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 14px;
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: 86px 14px 16px;
+    box-sizing: border-box;
+  }
+  body.music-page .focus-left,
+  body.music-page .focus-player {
+    position: static;
+    width: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+  }
+  .focus-avatar { top: 16px; left: 16px; width: 44px; height: 44px; }
+}
+
+/* ---------- 减少动态偏好：场景静下来，只留静态壁纸 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .anim-breathe, .anim-sway, .anim-swing,
+  .scene__stars i, .scene__meteor { animation: none !important; }
+  .scene__meteor, .scene__stars { display: none; }
+}
