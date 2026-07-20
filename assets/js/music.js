@@ -14,17 +14,14 @@
   var API = 'https://api.injahow.cn/meting/';   // Meting 公共 API（injahow 开源版）
   var DEFAULT_COVER = 'assets/img/好可爱.jpg';
 
-  /* 内置曲目：想加歌就往这里加一行（lrc 可选，支持标准 LRC 和网易云 JSON 歌词） */
+  /* 内置曲目：小圣自己的歌（想加歌就往这里加一行，lrc 可选） */
   var LOCAL_TRACKS = [
     { title: '拼接乌托邦',                        artist: 'Ciyo / 见过夏天P / 乌托邦P', src: 'assets/music/local/pinjie-wutuobang.mp3',      lrc: 'assets/music/local/pinjie-wutuobang.lrc' },
     { title: 'Numb Little Bug',                   artist: 'Em Beihold',                 src: 'assets/music/local/numb-little-bug.mp3',        lrc: 'assets/music/local/numb-little-bug.lrc' },
     { title: 'Shut up My Moms Calling',           artist: 'Hotel Ugly',                 src: 'assets/music/local/shut-up-my-moms-calling.mp3',lrc: 'assets/music/local/shut-up-my-moms-calling.lrc' },
     { title: 'You Are Not Alone',                 artist: 'Michael Jackson',            src: 'assets/music/local/you-are-not-alone.mp3',      lrc: 'assets/music/local/you-are-not-alone.lrc' },
     { title: 'death bed (coffee for your head)',  artist: 'Powfu / beabadoobee',        src: 'assets/music/local/death-bed.mp3',              lrc: 'assets/music/local/death-bed.lrc' },
-    { title: '我要你',                            artist: '任素汐',                     src: 'assets/music/local/wo-yao-ni.mp3',              lrc: null },
-    { title: 'Fluffing a Duck',                   artist: 'Kevin MacLeod',              src: 'assets/music/fluffing-a-duck.mp3' },
-    { title: 'Pixel Peeker Polka - faster',       artist: 'Kevin MacLeod',              src: 'assets/music/pixel-peeker-polka.mp3' },
-    { title: 'Monkeys Spinning Monkeys',          artist: 'Kevin MacLeod',              src: 'assets/music/monkeys-spinning-monkeys.mp3' }
+    { title: '我要你',                            artist: '任素汐',                     src: 'assets/music/local/wo-yao-ni.mp3',              lrc: null }
   ];
 
   var MAX_LIST = 100;   // 歌单太长只显示前 100 首
@@ -133,10 +130,24 @@
     if (autoplay) play();
   }
 
+  /* 浏览器禁自动播放时：播放键呼吸闪烁提示，点页面任意处开播 */
+  var gestureHandler = null;
+  function needGesture() {
+    btnPlay.classList.add('needs-gesture');
+    btnPlay.title = '点我播放 ♪';
+    if (gestureHandler) return;
+    gestureHandler = function () {
+      document.removeEventListener('pointerdown', gestureHandler);
+      gestureHandler = null;
+      play();
+    };
+    document.addEventListener('pointerdown', gestureHandler);
+  }
+
   function play() {
     ensureCtx();
     var p = audio.play();
-    if (p && p.catch) p.catch(function () { /* 浏览器拦了自动播放，等用户亲手点 */ });
+    if (p && p.catch) p.catch(function () { needGesture(); });
   }
 
   function toggle() {
@@ -163,6 +174,8 @@
   audio.addEventListener('play', function () {
     player.classList.add('is-playing');
     btnPlay.textContent = '⏸';
+    btnPlay.classList.remove('needs-gesture');
+    btnPlay.title = '播放 / 暂停';
   });
   audio.addEventListener('pause', function () {
     player.classList.remove('is-playing');
