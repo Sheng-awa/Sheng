@@ -711,6 +711,15 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 @keyframes skin-cat { to { background-position: -288px 0; } }    /* idle 前 3 帧 */
 @keyframes skin-slime { to { background-position: -384px 0; } }  /* idle 前 4 帧 */
 
+.skin-preview--miku {
+  width: 96px; height: 96px;
+  background-image: url('../img/pet-miku.png');
+  background-size: 960px 96px;    /* 整条 10 帧原尺寸 */
+  animation: skin-miku 0.9s steps(3) infinite;
+}
+
+@keyframes skin-miku { to { background-position: -288px 0; } }   /* idle 前 3 帧 */
+
 .pet-settings {
   background: var(--card);
   border-radius: var(--radius);

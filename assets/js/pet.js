@@ -57,6 +57,20 @@
         squash:  { frames: [12],         fps: 1 },  // 压扁：落地
         sleep:   { frames: [0],          fps: 1 }
       }
+    },
+    miku: {
+      src: 'assets/img/pet-miku.png',
+      FW: 96, FH: 96, DW: 96, DH: 96,
+      canClimb: false,     // 没有爬墙帧，和猫一样纯地面
+      parachute: false,    // 翻跟头下落，不撑伞
+      ANIMS: {
+        idle:    { frames: [0, 1, 2],    fps: 3 },
+        crawl:   { frames: [3, 4],       fps: 6 },
+        wall:    { frames: [3, 4],       fps: 5 },
+        stretch: { frames: [5],          fps: 1 },  // 翻跟头：飞行
+        squash:  { frames: [6],          fps: 1 },  // 趴地捂脸：落地
+        sleep:   { frames: [7, 8, 9],    fps: 2 }   // 侧躺眯眯眼
+      }
     }
   };
   var SKIN = SKINS[store.get('skin', 'cat')] || SKINS.cat;
