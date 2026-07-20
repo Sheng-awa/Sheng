@@ -396,7 +396,9 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 
 .hero__subtitle { margin-top: 14px; font-size: clamp(1rem, 2.6vw, 1.2rem); color: var(--accent-deep); font-weight: 600; }
 
-.hero__desc { margin-top: 18px; color: var(--text-soft); font-size: clamp(0.95rem, 2.2vw, 1.05rem); }
+.hero__weather { margin-top: 18px; color: var(--text-soft); font-size: clamp(0.95rem, 2.2vw, 1.05rem); }
+
+.hero__weather-dot { margin: 0 0.55em; opacity: 0.5; }
 
 .hero__actions { margin-top: 36px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
 
@@ -462,35 +464,6 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
   border-radius: 4px;
   background: linear-gradient(90deg, var(--accent), var(--lavender));
 }
-
-/* ---------- 关于 ---------- */
-.about__card {
-  background: var(--card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
-  padding: clamp(28px, 5vw, 52px);
-  transition: background-color var(--speed) var(--ease),
-    box-shadow 0.45s var(--ease), transform 0.45s var(--ease);
-}
-
-.about__card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
-
-.about__card p + p { margin-top: 1em; }
-
-.about__tags { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px; }
-
-.tag {
-  padding: 7px 16px;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent-deep);
-  font-size: 0.86rem;
-  font-weight: 700;
-  transition: transform 0.35s var(--ease), background-color var(--speed) var(--ease);
-}
-
-.tag:nth-child(even) { background: var(--lavender-soft); color: var(--lavender); }
-.tag:hover { transform: translateY(-2px) scale(1.04); }
 
 /* ---------- 喜好卡片 ---------- */
 .likes__grid {
@@ -573,6 +546,214 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 .contact__label { font-weight: 800; width: 4.5em; flex: none; }
 .contact__value { color: var(--text-soft); font-size: 0.94rem; word-break: break-all; }
 
+/* ---------- 桌宠（像素史莱姆） ---------- */
+.pet {
+  position: fixed;
+  left: 0; top: 0;
+  width: 96px;
+  z-index: 150;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 0.8s var(--ease);
+  will-change: left, top;
+}
+
+.pet--on { opacity: 1; }
+.pet.is-drag { cursor: grabbing; }
+
+.pet.is-bye {
+  opacity: 0 !important;
+  transition: opacity 0.5s var(--ease) !important;
+}
+
+/* 朝向层：表面切换时平滑转身；自由飞行时关掉过渡由 JS 每帧驱动 */
+.pet__rot { transition: transform 0.45s var(--ease); }
+.pet--free .pet__rot { transition: none; }
+
+.pet__gl {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+}
+
+/* 打瞌睡的 💤 */
+.pet__zzz {
+  position: absolute;
+  top: -14px; right: -6px;
+  font-size: 1rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s var(--ease);
+}
+
+.pet__zzz:not([hidden]) { opacity: 1; animation: pet-zzz 2.4s ease-in-out infinite; }
+
+@keyframes pet-zzz {
+  0%, 100% { transform: translateY(0) scale(0.85); opacity: 0.55; }
+  50%      { transform: translateY(-8px) scale(1.1); opacity: 1; }
+}
+
+/* 点击冒出的爱心 */
+.pet__heart {
+  position: absolute;
+  bottom: 80%;
+  color: var(--accent-deep);
+  font-size: 1rem;
+  pointer-events: none;
+  opacity: 0;
+  animation: pet-heart 1.1s var(--ease) forwards;
+}
+
+@keyframes pet-heart {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.6); }
+  20%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--hx, 0), -44px) scale(1.25); }
+}
+
+/* 气泡对话 */
+.pet__bubble {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.7);
+  transform-origin: bottom center;
+  background: var(--card);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 7px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease),
+    background-color var(--speed) var(--ease);
+}
+
+.pet__bubble.is-on { opacity: 1; transform: translateX(-50%) scale(1); }
+
+/* ---------- 桌宠自定义页 ---------- */
+.pet-config__lead {
+  color: var(--text-soft);
+  margin: -8px 0 26px;
+}
+
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.skin-card {
+  position: relative;
+  background: var(--card);
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  padding: 24px 20px 20px;
+  text-align: center;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+  transition: transform var(--speed) var(--ease), border-color var(--speed) var(--ease),
+    box-shadow var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+
+.skin-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.skin-card.is-active { border-color: var(--accent-deep); }
+
+.skin-card h3 { margin: 10px 0 8px; }
+.skin-card p { color: var(--text-soft); font-size: 0.9rem; line-height: 1.7; margin: 0; }
+
+.skin-card__badge {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: var(--accent-deep);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 999px;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity var(--speed) var(--ease), transform var(--speed) var(--ease);
+}
+
+.skin-card.is-active .skin-card__badge { opacity: 1; transform: scale(1); }
+
+/* 皮肤预览：直接播放精灵图（像素风，关闭平滑） */
+.skin-preview {
+  display: block;
+  margin: 0 auto;
+  image-rendering: pixelated;
+  background-repeat: no-repeat;
+}
+
+.skin-preview--cat {
+  width: 96px; height: 80px;
+  background-image: url('../img/pet-cat.png');
+  background-size: 1152px 80px;   /* 整条 12 帧放大 2x */
+  animation: skin-cat 0.9s steps(3) infinite;
+}
+
+.skin-preview--slime {
+  width: 96px; height: 75px;
+  background-image: url('../img/pet-slime.png');
+  background-size: 1632px 75px;   /* 整条 17 帧放大 3x */
+  animation: skin-slime 1.2s steps(4) infinite;
+}
+
+@keyframes skin-cat { to { background-position: -288px 0; } }    /* idle 前 3 帧 */
+@keyframes skin-slime { to { background-position: -384px 0; } }  /* idle 前 4 帧 */
+
+.pet-settings {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  margin-bottom: 26px;
+  transition: background-color var(--speed) var(--ease);
+}
+
+.pet-settings__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pet-settings__row input { accent-color: var(--accent-deep); width: 18px; height: 18px; }
+.pet-settings__hint { color: var(--text-soft); font-size: 0.85rem; margin: 8px 0 0; }
+
+.pet-help {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px 22px;
+  transition: background-color var(--speed) var(--ease);
+}
+
+.pet-help h3 { margin: 0 0 10px; }
+.pet-help ul { margin: 0; padding-left: 1.2em; color: var(--text-soft); line-height: 2; }
+
+/* 可点击的喜好卡片（链到桌宠页） */
+.like-card--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.like-card--link:hover { transform: translateY(-4px); box-shadow: var(--shadow); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pet { display: none; }
+}
+
 /* ---------- 页脚 ---------- */
 .footer {
   padding: 36px 24px;
@@ -617,6 +798,7 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
   .nav__links a { font-size: 0.85rem; }
   .nav__logo { font-size: 1rem; }
   .section { padding: 80px 0; }
+  .pet { width: 72px; }
   .contact__label { width: auto; }
   .contact__item { flex-wrap: wrap; gap: 10px 14px; }
 }

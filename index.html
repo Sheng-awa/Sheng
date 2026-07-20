@@ -20,6 +20,17 @@
   <!-- 特效画布：粉色鼠标轨迹 + 飘雪 -->
   <canvas class="fx-canvas" id="fxCanvas" aria-hidden="true"></canvas>
 
+  <!-- 桌宠：暹罗猫 / 粉色史莱姆（pet.html 可切换），沿底边巡逻（点它跳高、拖拽甩飞、双击躲起来） -->
+  <div class="pet" id="pet" data-state="idle" data-surface="floor" aria-hidden="true">
+    <div class="pet__rot">
+      <div class="pet__flip">
+        <canvas class="pet__gl" id="petGL"></canvas>
+      </div>
+    </div>
+    <div class="pet__bubble" id="petBubble"></div>
+    <div class="pet__zzz" id="petZzz" hidden>💤</div>
+  </div>
+
   <!-- 导航（GitHub 风格：左侧 logo + 链接，右侧操作；宽屏为可伸缩侧边栏） -->
   <header class="nav" id="nav">
     <div class="nav__left">
@@ -30,10 +41,10 @@
         </button>
       </div>
       <nav class="nav__links">
-        <a href="#about"><span class="nav__icon">❀</span><span class="nav__text">关于</span></a>
         <a href="#likes"><span class="nav__icon">♥</span><span class="nav__text">喜好</span></a>
         <a href="#corner"><span class="nav__icon">✦</span><span class="nav__text">小角落</span></a>
         <a href="#contact"><span class="nav__icon">✉</span><span class="nav__text">联系</span></a>
+        <a href="pet.html"><span class="nav__icon">🐾</span><span class="nav__text">桌宠</span></a>
       </nav>
     </div>
     <button class="theme-toggle" id="themeToggle" aria-label="切换明暗主题" title="切换主题">
@@ -51,44 +62,18 @@
         </div>
         <h1 class="hero__title reveal" style="--d:.12s">你好呀，我是<span class="hero__name">小圣</span></h1>
         <p class="hero__subtitle reveal" style="--d:.24s">男娘一枚，正在慢慢成为自己喜欢的样子 ✿</p>
-        <p class="hero__desc reveal" style="--d:.36s">
-          欢迎来到我的小角落。<br />
-          这里很软、很慢、很舒服，坐下来歇一会儿吧。
+        <p class="hero__weather reveal" style="--d:.36s">
+          <span>📍 江西南昌</span>
+          <span class="hero__weather-dot">·</span>
+          <span id="weatherText">正在获取天气…</span>
         </p>
         <div class="hero__actions reveal" style="--d:.48s">
-          <a class="btn btn--primary" href="#about">认识我一下</a>
           <a class="btn btn--ghost" href="#contact">来找我玩</a>
         </div>
       </div>
-      <a class="hero__scroll-hint" href="#about" aria-label="向下滚动">
+      <a class="hero__scroll-hint" href="#likes" aria-label="向下滚动">
         <span></span>
       </a>
-    </section>
-
-    <!-- 关于我 -->
-    <section class="section" id="about">
-      <div class="container">
-        <h2 class="section__title reveal">关于我</h2>
-        <div class="about__card reveal" style="--d:.1s">
-          <p>
-            我是小圣，一个喜欢可爱东西的人，在网上给自己搭了个小窝。
-          </p>
-          <p>
-            身体是男孩子，心里住着一个小姑娘。
-            正在按照自己的节奏，一点一点地靠近理想中的自己——不急，慢慢来。
-          </p>
-          <p>
-            平时喜欢折腾代码、玩玩游戏、收集一切软乎乎粉嘟嘟的小东西。
-            这个网站以后也会慢慢变出各种各样的东西来，先占个坑 ✿
-          </p>
-          <div class="about__tags">
-            <span class="tag">🏳️‍⚧️ 做自己</span>
-            <span class="tag">✿ 可爱即正义</span>
-            <span class="tag">☾ 夜猫子</span>
-            <span class="tag">⌨ 喜欢折腾</span>
-          </div>
-        </div>
-      </div>
     </section>
 
     <!-- 喜好 -->
@@ -106,11 +91,11 @@
             <h3>折腾代码</h3>
             <p>给自己写点小工具、搭个小网站，看着想法一点点变成现实最开心了。</p>
           </article>
-          <article class="like-card reveal" style="--d:.25s">
-            <div class="like-card__icon">🎮</div>
-            <h3>游戏</h3>
-            <p>闲暇时玩一玩游戏，在别的世界里冒冒险、种种田、看看风景。</p>
-          </article>
+          <a class="like-card like-card--link reveal" style="--d:.25s" href="pet.html">
+            <div class="like-card__icon">🐾</div>
+            <h3>桌宠自定义</h3>
+            <p>领养一只住在屏幕边的小家伙：暹罗猫或粉色史莱姆，随你挑。</p>
+          </a>
           <article class="like-card reveal" style="--d:.35s">
             <div class="like-card__icon">🛏️</div>
             <h3>睡个好觉</h3>
@@ -145,10 +130,10 @@
             <span class="contact__label">GitHub</span>
             <span class="contact__value">@Sheng-awa</span>
           </a>
-          <a class="contact__item" href="mailto:ShnegQwQ@outlook.com">
+          <a class="contact__item" href="mailto:ShengQwQ@outlook.com">
             <span class="contact__icon">✉</span>
             <span class="contact__label">邮箱</span>
-            <span class="contact__value">ShnegQwQ@outlook.com</span>
+            <span class="contact__value">ShengQwQ@outlook.com</span>
           </a>
           <a class="contact__item" href="https://sheng-awa.top" target="_blank" rel="noopener">
             <span class="contact__icon">✿</span>
@@ -165,5 +150,6 @@
   </footer>
 
   <script src="assets/js/main.js"></script>
+  <script src="assets/js/pet.js"></script>
 </body>
 </html>

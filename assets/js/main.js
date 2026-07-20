@@ -1,6 +1,6 @@
 /* ============================================================
    小圣的小窝 · main.js
-   轻量原生 JS：主题切换 / 滚动显现 / 花瓣飘落 / 导航状态
+   轻量原生 JS：主题切换 / 滚动显现 / 花瓣飘落 / 导航状态 / 天气
    ============================================================ */
 (function () {
   "use strict";
@@ -10,11 +10,11 @@
   /* ---------- 主题切换（记忆偏好） ---------- */
   var root = document.documentElement;
   var toggle = document.getElementById("themeToggle");
-  var icon = toggle.querySelector(".theme-toggle__icon");
+  var icon = toggle ? toggle.querySelector(".theme-toggle__icon") : null;
 
   function applyTheme(theme) {
     root.setAttribute("data-theme", theme);
-    icon.textContent = theme === "dark" ? "☀" : "☾";
+    if (icon) icon.textContent = theme === "dark" ? "☀" : "☾";
     try { localStorage.setItem("sheng-theme", theme); } catch (e) {}
   }
 
@@ -24,9 +24,11 @@
     (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
   applyTheme(initial);
 
-  toggle.addEventListener("click", function () {
-    applyTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
+  if (toggle) {
+    toggle.addEventListener("click", function () {
+      applyTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+    });
+  }
 
   /* ---------- 滚动显现动画 ---------- */
   var revealEls = Array.prototype.slice.call(document.querySelectorAll(".reveal"));
@@ -72,7 +74,7 @@
       });
     }, { rootMargin: "-40% 0px -55% 0px" });
 
-    ["about", "likes", "corner", "contact"].forEach(function (id) {
+    ["likes", "corner", "contact"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) sectionIO.observe(el);
     });
@@ -107,7 +109,8 @@
   }
 
   /* ---------- 页脚年份 ---------- */
-  document.getElementById("year").textContent = new Date().getFullYear();
+  var yearEl = document.getElementById("year");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
 })();
 
 /* ============================================================
@@ -287,4 +290,40 @@
   btn.addEventListener("click", function () {
     setCollapsed(!document.body.classList.contains("nav-collapsed"));
   });
+})();
+
+/* ============================================================
+   天气（Open-Meteo，免 key）：南昌当前天气
+   ============================================================ */
+(function () {
+  "use strict";
+
+  var el = document.getElementById("weatherText");
+  if (!el) return;
+
+  /* WMO 天气码 → [中文, 小图标] */
+  var CODES = {
+    0: ["晴", "☀️"], 1: ["大致晴", "🌤️"], 2: ["多云", "⛅"], 3: ["阴", "☁️"],
+    45: ["雾", "🌫️"], 48: ["雾凇", "🌫️"],
+    51: ["毛毛雨", "🌦️"], 53: ["毛毛雨", "🌦️"], 55: ["毛毛雨", "🌦️"],
+    56: ["冻毛毛雨", "🌧️"], 57: ["冻毛毛雨", "🌧️"],
+    61: ["小雨", "🌧️"], 63: ["中雨", "🌧️"], 65: ["大雨", "🌧️"],
+    66: ["冻雨", "🌧️"], 67: ["冻雨", "🌧️"],
+    71: ["小雪", "🌨️"], 73: ["中雪", "🌨️"], 75: ["大雪", "❄️"], 77: ["雪粒", "❄️"],
+    80: ["阵雨", "🌦️"], 81: ["强阵雨", "🌧️"], 82: ["暴雨", "⛈️"],
+    85: ["阵雪", "🌨️"], 86: ["强阵雪", "❄️"],
+    95: ["雷阵雨", "⛈️"], 96: ["雷阵雨伴冰雹", "⛈️"], 99: ["雷阵雨伴冰雹", "⛈️"]
+  };
+
+  /* 南昌坐标：28.68°N, 115.86°E */
+  fetch("https://api.open-meteo.com/v1/forecast?latitude=28.68&longitude=115.86&current=temperature_2m,weather_code&timezone=Asia%2FShanghai")
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      var c = d.current || {};
+      var w = CODES[c.weather_code] || ["天气未知", "✿"];
+      el.textContent = w[1] + " " + w[0] + " " + Math.round(c.temperature_2m) + "°C";
+    })
+    .catch(function () {
+      el.textContent = "✿ 天气暂时开小差了";
+    });
 })();
