@@ -1,9 +1,8 @@
 /* ============================================
-   桌宠：暹罗猫 / 粉色史莱姆（可在 pet.html 切换）
-   - 暹罗猫：Shepardskin 像素猫染色（免署名），不爬墙，
-     点击跳得很高，下落时撑小降落伞
-   - 史莱姆：rvros CC0 素材染粉，会沿边缘爬墙上天花板
-   交互：拖拽甩飞 / 点击跳跃 / 双击躲起来 8 秒 / 45 秒不互动打瞌睡
+   桌宠：像素初音未来（shimeji 同人素材）
+   - 沿底边巡逻，不会爬墙，被甩飞时翻跟头
+   交互：单击冒出播放按钮（去音乐页）/ 拖拽甩飞 /
+         双击躲起来 8 秒 / 45 秒不互动打瞌睡
    ============================================ */
 (function () {
   'use strict';
@@ -28,52 +27,21 @@
     }
   };
 
-  /* ---------- 皮肤表 ---------- */
-  var SKINS = {
-    cat: {
-      src: 'assets/img/pet-cat.png',
-      FW: 48, FH: 40, DW: 96, DH: 80,
-      canClimb: false,     // 猫不爬墙，到边就掉头
-      parachute: true,     // 下落撑伞
-      ANIMS: {
-        idle:    { frames: [0, 1, 2],          fps: 3 },
-        crawl:   { frames: [3, 4, 5, 6, 7, 8], fps: 9 },
-        wall:    { frames: [3, 4, 5, 6, 7, 8], fps: 5 },
-        stretch: { frames: [9],                fps: 1 },  // 扑跃：飞行
-        squash:  { frames: [10],               fps: 1 },  // 趴伏：落地
-        sleep:   { frames: [11],               fps: 1 }
-      }
-    },
-    slime: {
-      src: 'assets/img/pet-slime.png',
-      FW: 32, FH: 25, DW: 96, DH: 75,
-      canClimb: true,
-      parachute: false,
-      ANIMS: {
-        idle:    { frames: [0, 1, 2, 3], fps: 6 },
-        crawl:   { frames: [4, 5, 6, 7], fps: 9 },
-        wall:    { frames: [4, 5, 6, 7], fps: 5 },
-        stretch: { frames: [10],         fps: 1 },  // 拉长：飞行
-        squash:  { frames: [12],         fps: 1 },  // 压扁：落地
-        sleep:   { frames: [0],          fps: 1 }
-      }
-    },
-    miku: {
-      src: 'assets/img/pet-miku.png',
-      FW: 96, FH: 96, DW: 96, DH: 96,
-      canClimb: false,     // 没有爬墙帧，和猫一样纯地面
-      parachute: false,    // 翻跟头下落，不撑伞
-      ANIMS: {
-        idle:    { frames: [0, 1, 2],    fps: 3 },
-        crawl:   { frames: [3, 4],       fps: 6 },
-        wall:    { frames: [3, 4],       fps: 5 },
-        stretch: { frames: [5],          fps: 1 },  // 翻跟头：飞行
-        squash:  { frames: [6],          fps: 1 },  // 趴地捂脸：落地
-        sleep:   { frames: [7, 8, 9],    fps: 2 }   // 侧躺眯眯眼
-      }
+  /* ---------- 皮肤：初音未来 ---------- */
+  var SKIN = {
+    src: 'assets/img/pet-miku.png',
+    FW: 96, FH: 96, DW: 96, DH: 96,
+    canClimb: false,     // 没有爬墙帧，纯地面活动
+    parachute: false,    // 翻跟头下落，不撑伞
+    ANIMS: {
+      idle:    { frames: [0, 1, 2],    fps: 3 },
+      crawl:   { frames: [3, 4],       fps: 6 },
+      wall:    { frames: [3, 4],       fps: 5 },
+      stretch: { frames: [5],          fps: 1 },  // 翻跟头：飞行
+      squash:  { frames: [6],          fps: 1 },  // 趴地捂脸：落地
+      sleep:   { frames: [7, 8, 9],    fps: 2 }   // 侧躺眯眯眼
     }
   };
-  var SKIN = SKINS[store.get('skin', 'cat')] || SKINS.cat;
   var FW = SKIN.FW, FH = SKIN.FH, DW = SKIN.DW, DH = SKIN.DH;
 
   var strip = new Image();
@@ -137,6 +105,31 @@
     bye:      ['我去躲一下～', '拜拜，等会见']
   };
 
+  /* ---------- 播放按钮：单击宠物冒出，点了去音乐页 ---------- */
+  var playBtn = document.createElement('button');
+  playBtn.className = 'pet__play';
+  playBtn.type = 'button';
+  playBtn.setAttribute('aria-label', '去音乐播放器');
+  playBtn.title = '去音乐播放器 ♪';
+  playBtn.textContent = '▶';
+  root.appendChild(playBtn);
+
+  var playTimer = 0;
+  function showPlay() {
+    playBtn.classList.add('is-on');
+    clearTimeout(playTimer);
+    playTimer = setTimeout(hidePlay, 5000);
+  }
+  function hidePlay() {
+    playBtn.classList.remove('is-on');
+    clearTimeout(playTimer);
+  }
+  playBtn.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+  playBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    location.href = 'music.html';
+  });
+
   /* 表面位置 → 视口坐标（pet 中心） */
   function toXY(surface, pos, out) {
     var w = vw(), h = vh(), m = W / 2;
@@ -195,33 +188,6 @@
     }
   }
 
-  /* 降落伞：猫下落时撑开的小粉伞（像素块拼的半圆伞盖） */
-  function drawParachute() {
-    var t = performance.now() / 1000;
-    var sway = Math.sin(t * 2.4) * 6;
-    var cx = W / 2 + sway;
-    var baseY = W - DH - 4;          // 伞盖底缘（猫头顶上方）
-    var RW = 28, RH = 13;
-    // 伞绳
-    ctx2d.strokeStyle = 'rgba(122, 92, 72, 0.85)';
-    ctx2d.lineWidth = 1.5;
-    ctx2d.beginPath();
-    ctx2d.moveTo(cx - RW + 4, baseY);
-    ctx2d.lineTo(W / 2, W - DH + 16);
-    ctx2d.moveTo(cx + RW - 4, baseY);
-    ctx2d.lineTo(W / 2, W - DH + 16);
-    ctx2d.stroke();
-    // 像素伞盖
-    ctx2d.fillStyle = '#f0a0bf';
-    var b = 3;
-    for (var gx = -RW; gx <= RW; gx += b) {
-      var hh = Math.sqrt(Math.max(RW * RW - gx * gx, 0)) / RW * RH;
-      for (var gy = 0; gy < hh; gy += b) {
-        ctx2d.fillRect(Math.round(cx + gx), Math.round(baseY - gy - b), b, b);
-      }
-    }
-  }
-
   function draw() {
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     if (canvas.width !== W * dpr) {
@@ -232,9 +198,6 @@
     ctx2d.imageSmoothingEnabled = false;
     ctx2d.clearRect(0, 0, W, W);
     if (!stripReady) return;
-    if (SKIN.parachute && pet.mode === 'thrown' && !dragging && pet.vy > 60) {
-      drawParachute();
-    }
     ctx2d.drawImage(strip, pet.frame * FW, 0, FW, FH, 0, W - DH, DW, DH);
   }
 
@@ -395,7 +358,7 @@
     say(pick(LINES.catch));
   }
 
-  /* 点一下：使劲跳得很高 */
+  /* 点一下：跳一下、冒爱心，并弹出播放按钮（去音乐页） */
   function hop() {
     toXY(pet.surface, pet.pos, tmp);
     pet.px = tmp.x;
@@ -407,7 +370,7 @@
     pet.mode = 'thrown';
     root.classList.add('pet--free');
     hearts();
-    say(pick(LINES.jump));
+    showPlay();
   }
 
   /* ---------- 主循环 ---------- */
@@ -463,8 +426,9 @@
   }
 
   root.addEventListener('pointerdown', function (e) {
-    if (e.target.closest('.pet__bye')) return;
+    if (e.target.closest('.pet__bye') || e.target.closest('.pet__play')) return;
     wake();
+    hidePlay();
     dragging = true;
     dragMoved = false;
     root.classList.add('is-drag');
@@ -498,7 +462,7 @@
     pet.sleepIn = 45;
 
     if (!dragMoved) {
-      hop();                           // 单击：跳得很高
+      hop();                           // 单击：跳一下 + 冒播放按钮
       return;
     }
     // 甩出去
@@ -510,6 +474,7 @@
 
   root.addEventListener('dblclick', function () {
     wake();
+    hidePlay();
     say(pick(LINES.bye), 1800);
     root.classList.add('is-bye');
     clearTimeout(pet.hideT);
