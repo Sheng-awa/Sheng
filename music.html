@@ -47,8 +47,14 @@
         <h2 class="section__title reveal">小圣的播放器 ♪</h2>
         <p class="music__lead reveal" style="--d:.1s">
           在首页点一下初音，她头上的 ▶ 也会把你带到这里。<br />
-          内置了几首轻快的小曲子，随便听～
+          可以听内置小曲子，也可以粘贴网易云歌单链接，整个歌单随便听～
         </p>
+
+        <div class="music__loader reveal" style="--d:.15s">
+          <input id="playlistInput" type="text" placeholder="粘贴网易云歌单 / 歌曲链接或 ID" aria-label="网易云歌单链接或 ID" />
+          <button id="playlistBtn" type="button">加载</button>
+          <button id="playlistReset" type="button" class="ghost" hidden>↩ 内置</button>
+        </div>
 
         <div class="player reveal" style="--d:.2s" id="player">
           <img class="player__disc" src="assets/img/好可爱.jpg" alt="播放器封面" />
@@ -56,6 +62,7 @@
             <h3 id="trackTitle">加载中…</h3>
             <p id="trackArtist">♪</p>
           </div>
+          <div class="player__lyric" id="lyricLine">♪</div>
           <canvas class="player__viz" id="playerViz" aria-hidden="true"></canvas>
           <div class="player__progress" id="playerProgress" role="slider" aria-label="播放进度">
             <div class="player__progress-bar" id="playerBar"></div>
@@ -74,10 +81,11 @@
             <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" aria-label="音量" />
             <span>🔊</span>
           </div>
+          <p class="player__list-title" id="listTitle">内置音乐</p>
           <ul class="player__list" id="playerList"></ul>
           <p class="player__credit">
-            内置音乐：<a href="https://incompetech.com" target="_blank" rel="noopener">Kevin MacLeod（incompetech.com）</a>，CC BY 4.0 授权<br />
-            想听自己的歌？把 mp3 放进 <code>assets/music/</code>，再到 <code>assets/js/music.js</code> 的曲目表里加一行就好
+            内置音乐：<a href="https://incompetech.com" target="_blank" rel="noopener">Kevin MacLeod（incompetech.com）</a>，CC BY 4.0 授权；
+            网易云歌单由 <a href="https://github.com/injahow/meting-api" target="_blank" rel="noopener">Meting API</a> 提供解析，版权歌曲可能只能试听一小段哦
           </p>
         </div>
       </div>

@@ -614,29 +614,6 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
   100% { opacity: 0; transform: translate(var(--hx, 0), -44px) scale(1.25); }
 }
 
-/* 气泡对话 */
-.pet__bubble {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%) scale(0.7);
-  transform-origin: bottom center;
-  background: var(--card);
-  color: var(--text);
-  border-radius: 14px;
-  padding: 7px 14px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  white-space: nowrap;
-  box-shadow: var(--shadow);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s var(--ease), transform 0.3s var(--ease),
-    background-color var(--speed) var(--ease);
-}
-
-.pet__bubble.is-on { opacity: 1; transform: translateX(-50%) scale(1); }
-
 /* 单击宠物冒出的播放按钮（点了去音乐页） */
 .pet__play {
   position: absolute;
@@ -865,3 +842,75 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 }
 
 .player__credit a { color: var(--accent-deep); }
+
+/* 当前歌词行 */
+.player__lyric {
+  min-height: 1.6em;
+  color: var(--accent-deep);
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin: -4px 0 12px;
+  transition: opacity 0.15s var(--ease);
+}
+
+.player__lyric.fade { opacity: 0; }
+
+/* 网易云歌单输入栏 */
+.music__loader {
+  display: flex;
+  gap: 10px;
+  max-width: 560px;
+  margin: 0 auto 22px;
+}
+
+.music__loader input {
+  flex: 1;
+  min-width: 0;
+  border: 2px solid var(--accent-soft);
+  background: var(--card);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color var(--speed) var(--ease), background-color var(--speed) var(--ease);
+}
+
+.music__loader input:focus { border-color: var(--accent-deep); }
+
+.music__loader button {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--accent), var(--lavender));
+  color: #fff;
+  white-space: nowrap;
+  transition: transform var(--speed) var(--ease), opacity var(--speed) var(--ease);
+}
+
+.music__loader button:hover { transform: translateY(-2px); }
+.music__loader button:disabled { opacity: 0.55; cursor: wait; }
+.music__loader button.ghost { background: var(--accent-soft); color: var(--accent-deep); }
+
+/* 列表标题 + 可滚动列表 + 失败标记 */
+.player__list-title {
+  text-align: left;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-soft);
+  margin: 0 4px 8px;
+}
+
+.player__list {
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) transparent;
+}
+
+.player__list li.is-error { opacity: 0.4; text-decoration: line-through; }

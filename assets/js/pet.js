@@ -12,9 +12,8 @@
 
   var root = document.getElementById('pet');
   var canvas = document.getElementById('petGL');
-  var bubble = document.getElementById('petBubble');
   var zzz = document.getElementById('petZzz');
-  if (!root || !canvas || !bubble || !zzz) return;
+  if (!root || !canvas || !zzz) return;
 
   /* ---------- 偏好（localStorage 持久化） ---------- */
   var store = {
@@ -69,13 +68,12 @@
     spin: 0, spinV: 0,    // thrown 旋转
     splatT: 0,            // 摔扁剩余时间
     hideT: 0,
-    sleepIn: 45,          // 多久不互动就犯困（秒）
-    nearMiss: {}          // 台词冷却，防止复读
+    sleepIn: 45           // 多久不互动就犯困（秒）
   };
 
   var dragging = false, dragMoved = false, dragLast = { x: 0, y: 0, t: 0 };
   var dragVel = { x: 0, y: 0 };
-  var lastTs = 0, sayTimer = 0;
+  var lastTs = 0;
   var reduced = reduceMotion || store.get('off', false);
   var W = 96;
 
@@ -83,27 +81,6 @@
   function vw() { return window.innerWidth; }
   function vh() { return window.innerHeight; }
   function rand(a, b) { return a + Math.random() * (b - a); }
-  function pick(arr) {
-    if (!arr || !arr.length) return '';
-    return arr[Math.floor(Math.random() * arr.length)];
-  }
-
-  /* 台词表（内置，不依赖外部定义；缺了台词表也不能让动画崩掉） */
-  var LINES = window.PET_LINES || {
-    hello:    ['你好呀～', '我来啦 ✿'],
-    pat:      ['嘿嘿，好舒服～', '蹭蹭你 ♥'],
-    thrown:   ['哇——飞起来啦！', '呀啊啊——'],
-    splat:    ['呜哇，摔扁了…', '噗叽。'],
-    catch:    ['抓住啦！', '嘿嘿，粘住了'],
-    boundary: ['到头啦，掉头掉头'],
-    wall:     ['爬墙爬墙～', '我会上墙哦'],
-    ceiling:  ['倒挂金钩！', '上面风景不错'],
-    stuck:    ['唔…这里过不去', '卡在角角里了'],
-    jump:     ['跳！', '走你～', '高高的！'],
-    sleep:    ['好困…Zzz', '我先眯一会…'],
-    wake:     ['唔？我醒了我醒了', '早上好呀'],
-    bye:      ['我去躲一下～', '拜拜，等会见']
-  };
 
   /* ---------- 播放按钮：单击宠物冒出，点了去音乐页 ---------- */
   var playBtn = document.createElement('button');
@@ -159,14 +136,6 @@
     return px < CORNER || px > len - CORNER;
   }
 
-  /* 台词冷却，20 秒防复读 */
-  function sayOnce(key, cat) {
-    var now = Date.now();
-    if (pet.nearMiss[key] && now - pet.nearMiss[key] < 20000) return;
-    pet.nearMiss[key] = now;
-    say(pick(LINES[cat] || LINES.boundary));
-  }
-
   /* ---------- 渲染 ---------- */
   var tmp = { x: 0, y: 0 };
   var rotEl = root.querySelector('.pet__rot');
@@ -217,15 +186,6 @@
     pet.frame = a.frames[idx];
   }
 
-  /* ---------- 说话 ---------- */
-  function say(text, ms) {
-    if (!text) return;
-    bubble.textContent = text;
-    bubble.classList.add('is-on');
-    clearTimeout(sayTimer);
-    sayTimer = setTimeout(function () { bubble.classList.remove('is-on'); }, ms || 2600);
-  }
-
   /* ---------- 行为 ---------- */
   function startIdle(t) {
     pet.mode = 'idle';
@@ -242,7 +202,6 @@
   function startSleep() {
     pet.mode = 'sleep';
     zzz.hidden = false;
-    say(pick(LINES.sleep), 3000);
   }
 
   function wake() {
@@ -251,7 +210,6 @@
     pet.modeT = 1;
     zzz.hidden = true;
     pet.sleepIn = 45;
-    say(pick(LINES.wake));
   }
 
   /* 到达当前表面尽头：会爬墙的顺角落爬上去，不会的掉头 */
@@ -259,7 +217,6 @@
     if (!SKIN.canClimb) {
       pet.dir *= -1;
       pet.pos = clamp(pet.pos, 0, 1);
-      sayOnce('edge', 'boundary');
       startCrawl(rand(2, 5));
       return;
     }
@@ -267,7 +224,6 @@
       // 卡在角落里了：掉头，退回一段
       pet.dir *= -1;
       pet.pos = clamp(pet.pos + pet.dir * 0.06, 0, 1);
-      sayOnce('stuck', 'stuck');
       startCrawl(rand(2, 4));
       return;
     }
@@ -277,7 +233,6 @@
     if (pet.dir > 0) next = order[(i + 1) % 4];
     else next = order[(i + 3) % 4];
     setSurface(next);
-    sayOnce(pet.surface + Date.now(), (pet.surface === 'left' || pet.surface === 'right') ? 'wall' : 'ceiling');
   }
 
   function setSurface(s) {
@@ -304,7 +259,6 @@
     pet.spinV = rand(-300, 300);
     pet.mode = 'thrown';
     root.classList.add('pet--free');
-    say(pick(LINES.jump));
   }
 
   /* 被甩飞/跳起后的物理 */
@@ -340,7 +294,6 @@
         pet.vy = -impact * 0.32;       // 弹一下
         pet.vx *= 0.6;
         pet.splatT = 0.3;              // 摔扁
-        sayOnce('splat', 'splat');
       } else {
         pet.pos = toPos('floor', pet.px, pet.py);
         setSurface('floor');
@@ -355,7 +308,6 @@
     pet.pos = toPos(surface, pet.px, pet.py);
     setSurface(surface);
     startIdle(rand(1, 2.5));
-    say(pick(LINES.catch));
   }
 
   /* 点一下：跳一下、冒爱心，并弹出播放按钮（去音乐页） */
@@ -469,13 +421,11 @@
     pet.vx = clamp(dragVel.x, -900, 900) * 0.9;
     pet.vy = clamp(dragVel.y, -900, 900) * 0.9;
     pet.spinV = clamp(pet.vx * 0.6, -420, 420);
-    say(pick(LINES.thrown));
   });
 
   root.addEventListener('dblclick', function () {
     wake();
     hidePlay();
-    say(pick(LINES.bye), 1800);
     root.classList.add('is-bye');
     clearTimeout(pet.hideT);
     pet.hideT = setTimeout(function () {
@@ -503,7 +453,6 @@
     pet.pos = rand(0.25, 0.75);
     setSurface('floor');
     startIdle(1.5);
-    setTimeout(function () { say(pick(LINES.hello), 3200); }, 1200);
     requestAnimationFrame(tick);
   }
 
