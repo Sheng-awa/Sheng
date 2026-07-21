@@ -434,9 +434,23 @@
     return QUOTES[i];
   }
 
+  /* 气泡固定尺寸：长句自动缩字号（0.98rem → 0.66rem 下限），保证不溢出 */
+  var BASE_SIZE = 0.98;
+  var MIN_SIZE = 0.66;
+
+  function fitQuote() {
+    var size = BASE_SIZE;
+    textEl.style.fontSize = "";
+    while (textEl.scrollHeight > textEl.clientHeight && size > MIN_SIZE) {
+      size -= 0.04;
+      textEl.style.fontSize = size.toFixed(2) + "rem";
+    }
+  }
+
   function showText(t, a) {
     textEl.textContent = t;
     authorEl.textContent = "—— " + a;
+    fitQuote();
   }
 
   /* 一言 API（hitokoto.cn，免费免 key）：文学 / 诗词 / 哲学分类，限长 45 字 */
