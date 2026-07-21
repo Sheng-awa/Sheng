@@ -351,6 +351,51 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 
 .hero__avatar-wrap { position: relative; width: 168px; height: 168px; margin-bottom: 36px; }
 
+/* 头像行：头像 + 右侧名言气泡（窄屏自动折行到头像下方） */
+.hero__avatar-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 4.5vw, 36px);
+  flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+.hero__avatar-row .hero__avatar-wrap { margin-bottom: 0; flex: none; }
+
+/* 名人名言气泡：点击随机换一句 */
+.quote {
+  max-width: 320px;
+  padding: 14px 18px 12px;
+  border: 1px solid var(--accent);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform var(--speed) var(--ease), box-shadow var(--speed) var(--ease);
+}
+.quote:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
+.quote__text {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.65;
+  transition: opacity 0.18s ease;
+}
+.quote__author {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+  text-align: right;
+  transition: opacity 0.18s ease;
+}
+.quote.is-switching .quote__text,
+.quote.is-switching .quote__author { opacity: 0; }
+.quote__hint { display: block; margin-top: 8px; font-size: 0.72rem; color: var(--accent-deep); opacity: 0.75; }
+
 .hero__avatar {
   width: 100%; height: 100%;
   border-radius: 50%;

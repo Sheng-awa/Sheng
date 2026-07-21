@@ -348,3 +348,134 @@
       el.textContent = "✿ 天气暂时开小差了";
     });
 })();
+
+
+/* ============================================================
+   名人名言（hero 头像右侧气泡，点击随机换一句）
+   ============================================================ */
+(function () {
+  "use strict";
+
+  var btn = document.getElementById("quoteBtn");
+  var textEl = document.getElementById("quoteText");
+  var authorEl = document.getElementById("quoteAuthor");
+  if (!btn || !textEl || !authorEl) return;
+
+  var QUOTES = [
+    { t: "慢慢来，谁还没有一个努力的过程。", a: "佚名" },
+    { t: "苔花如米小，也学牡丹开。", a: "袁枚" },
+    { t: "不乱于心，不困于情，不畏将来，不念过往。", a: "丰子恺" },
+    { t: "生活在阴沟里，依然有仰望星空的权利。", a: "王尔德" },
+    { t: "星星发亮，是为了让每一个人有一天都能找到属于自己的星星。", a: "圣埃克苏佩里《小王子》" },
+    { t: "使沙漠美丽的，是它在某处藏着一口井。", a: "圣埃克苏佩里《小王子》" },
+    { t: "且视他人之疑目如盏盏鬼火，大胆地去走你的夜路。", a: "史铁生" },
+    { t: "每一个不曾起舞的日子，都是对生命的辜负。", a: "尼采" },
+    { t: "世上只有一种英雄主义，就是在认清生活真相之后依然热爱生活。", a: "罗曼·罗兰" },
+    { t: "总之岁月漫长，然而值得等待。", a: "村上春树" },
+    { t: "如果你因失去了太阳而流泪，那么你也将失去群星了。", a: "泰戈尔" },
+    { t: "黑夜无论怎样悠长，白昼总会到来。", a: "莎士比亚" },
+    { t: "但愿你的道路漫长，充满奇迹，充满发现。", a: "卡瓦菲斯" },
+    { t: "一个人可以被毁灭，但不能被打败。", a: "海明威" },
+    { t: "心有猛虎，细嗅蔷薇。", a: "萨松" },
+    { t: "人生如逆旅，我亦是行人。", a: "苏轼" },
+    { t: "做你自己，因为别人都有人做了。", a: "王尔德" },
+    { t: "你生而有翼，为何竟愿一生匍匐前进，形如虫蚁？", a: "鲁米" },
+    { t: "路漫漫其修远兮，吾将上下而求索。", a: "屈原" },
+    { t: "山重水复疑无路，柳暗花明又一村。", a: "陆游" },
+    { t: "长风破浪会有时，直挂云帆济沧海。", a: "李白" },
+    { t: "天生我材必有用，千金散尽还复来。", a: "李白" },
+    { t: "千磨万击还坚劲，任尔东西南北风。", a: "郑燮" },
+    { t: "纸上得来终觉浅，绝知此事要躬行。", a: "陆游" },
+    { t: "问渠那得清如许，为有源头活水来。", a: "朱熹" },
+    { t: "不畏浮云遮望眼，自缘身在最高层。", a: "王安石" },
+    { t: "会当凌绝顶，一览众山小。", a: "杜甫" },
+    { t: "欲穷千里目，更上一层楼。", a: "王之涣" },
+    { t: "海内存知己，天涯若比邻。", a: "王勃" },
+    { t: "落霞与孤鹜齐飞，秋水共长天一色。", a: "王勃" },
+    { t: "及时当勉励，岁月不待人。", a: "陶渊明" },
+    { t: "盛年不重来，一日难再晨。", a: "陶渊明" },
+    { t: "生活总是让我们遍体鳞伤，但到后来，那些受伤的地方一定会变成我们最强壮的地方。", a: "海明威" },
+    { t: "优于别人，并不高贵，真正的高贵应该是优于过去的自己。", a: "海明威" },
+    { t: "我走得很慢，但我从不后退。", a: "林肯" },
+    { t: "凡不能杀死我的，使我更强大。", a: "尼采" },
+    { t: "对待生命不妨大胆一点，因为终要失去它。", a: "尼采" },
+    { t: "万物皆有裂痕，那是光照进来的地方。", a: "莱昂纳德·科恩" },
+    { t: "明天又是新的一天。", a: "玛格丽特·米切尔《飘》" },
+    { t: "希望是美好的，也许是人间至善，而美好的事物永不消逝。", a: "《肖申克的救赎》" },
+    { t: "有些鸟是注定不会被关在笼子里的，它们的每一片羽毛都闪耀着自由的光辉。", a: "《肖申克的救赎》" },
+    { t: "人生就像一盒巧克力，你永远不知道下一颗是什么味道。", a: "《阿甘正传》" },
+    { t: "如果你有梦想的话，就要努力去实现它。", a: "《当幸福来敲门》" },
+    { t: "保持热爱，奔赴山海。", a: "佚名" },
+    { t: "愿你眼中总有光芒，活成你想要的模样。", a: "佚名" },
+    { t: "知足且坚定，温柔且上进。", a: "佚名" },
+    { t: "你现在的努力，藏着十年后的样子。", a: "佚名" },
+    { t: "别慌，月亮也正在大海某处迷茫。", a: "佚名" },
+    { t: "总有人间一两风，填我十万八千梦。", a: "佚名" },
+    { t: "怕什么真理无穷，进一寸有一寸的欢喜。", a: "胡适" },
+    { t: "功成不必在我，功力必不唐捐。", a: "胡适" },
+    { t: "猛兽总是独行，牛羊才成群结队。", a: "鲁迅" },
+    { t: "从来如此，便对么？", a: "鲁迅" },
+    { t: "愿中国青年都摆脱冷气，只是向上走。", a: "鲁迅" },
+    { t: "不积跬步，无以至千里；不积小流，无以成江海。", a: "荀子" },
+    { t: "锲而舍之，朽木不折；锲而不舍，金石可镂。", a: "荀子" },
+    { t: "天行健，君子以自强不息。", a: "《周易》" },
+    { t: "世界以痛吻我，要我报之以歌。", a: "泰戈尔" },
+    { t: "生如夏花之绚烂，死如秋叶之静美。", a: "泰戈尔" },
+    { t: "天空没有留下翅膀的痕迹，但我已经飞过。", a: "泰戈尔" }
+  ];
+
+  var current = -1;
+
+  function pickLocal() {
+    if (QUOTES.length === 1) return QUOTES[0];
+    var i;
+    do { i = Math.floor(Math.random() * QUOTES.length); } while (i === current);
+    current = i;
+    return QUOTES[i];
+  }
+
+  function showText(t, a) {
+    textEl.textContent = t;
+    authorEl.textContent = "—— " + a;
+  }
+
+  /* 一言 API（hitokoto.cn，免费免 key）：文学 / 诗词 / 哲学分类，限长 45 字 */
+  var HITOKOTO = "https://v1.hitokoto.cn/?c=d&c=i&c=k&max_length=45";
+
+  function fetchQuote() {
+    return fetch(HITOKOTO, { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d && d.hitokoto) return { t: d.hitokoto, a: d.from_who || d.from || "佚名" };
+        throw new Error("bad response");
+      });
+  }
+
+  /* 优先在线拉一言；失败 / 超时（4s）回退本地语录 */
+  var fetching = false;
+
+  function refresh(animate) {
+    if (fetching) return;
+    fetching = true;
+    if (animate) btn.classList.add("is-switching");
+    var done = false;
+    var finish = function (q) {
+      if (done) return;
+      done = true;
+      fetching = false;
+      showText(q.t, q.a);
+      if (animate) btn.classList.remove("is-switching");
+    };
+    /* 一言对同 IP 高频请求会返回缓存的同一句——与当前相同就回退本地，保证点击必换 */
+    fetchQuote().then(function (q) {
+      if (q.t === textEl.textContent) { finish(pickLocal()); } else { finish(q); }
+    }, function () { finish(pickLocal()); });
+    setTimeout(function () { finish(pickLocal()); }, 4000);
+  }
+
+  /* 进页先上一条本地的（秒开），再异步换成一言 */
+  showText(pickLocal().t, QUOTES[current].a);
+  refresh(false);
+
+  btn.addEventListener("click", function () { refresh(true); });
+})();
