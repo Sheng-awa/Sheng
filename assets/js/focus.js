@@ -400,13 +400,12 @@
 
   /* ---------- 更换壁纸（预设列表，当前界面切换，记忆选择） ----------
      以后加壁纸：图丢进 assets/img/scene/，下面数组加一项即可。
-     glow = 两处霓虹光晕（按咖啡店底图调的位置，新图一般关掉）；
-     rain = Canvas 雨丝；fan = Bunk 的台扇（位置按 Bunk 图调的）。 */
+     glow = 两处霓虹光晕（按咖啡店底图调的位置，新图一般关掉）；rain = Canvas 雨丝。 */
   var WALLPAPERS = [
-    { id: 'cafe', name: 'Lo-Fi 咖啡店', src: 'assets/img/scene/cafe.jpg', glow: true, rain: true, fan: false },
-    { id: 'bunk-night', name: '日式房间 · 夜', src: 'assets/img/scene/bunk-night.jpg', glow: false, rain: false, fan: 'assets/img/scene/bunk-fan-night.png' },
-    { id: 'bunk-day', name: '日式房间 · 昼', src: 'assets/img/scene/bunk-day.jpg', glow: false, rain: false, fan: 'assets/img/scene/bunk-fan.png' },
-    { id: 'aqua', name: '水族馆画室', src: 'assets/img/scene/aqua.jpg', glow: false, rain: true, fan: false }
+    { id: 'cafe', name: 'Lo-Fi 咖啡店', src: 'assets/img/scene/cafe.jpg', glow: true, rain: true },
+    { id: 'bunk-night', name: '日式房间 · 夜', src: 'assets/img/scene/bunk-night.jpg', glow: false, rain: false },
+    { id: 'bunk-day', name: '日式房间 · 昼', src: 'assets/img/scene/bunk-day.jpg', glow: false, rain: false },
+    { id: 'aqua', name: '水族馆画室', src: 'assets/img/scene/aqua.jpg', glow: false, rain: true }
   ];
   var wpPanel = document.getElementById('wpPanel');
   var wpGrid = document.getElementById('wpGrid');
@@ -417,15 +416,9 @@
       Array.prototype.forEach.call(wpGrid.children, function (item) {
         item.classList.toggle('is-active', item.getAttribute('data-wp') === wp.id);
       });
-      /* 场景配件随壁纸切换：光晕 / 雨丝 / 风扇 */
+      /* 场景配件随壁纸切换：光晕 / 雨丝 */
       var glows = document.querySelectorAll('.scene__glow');
       for (var g = 0; g < glows.length; g++) glows[g].style.display = wp.glow ? '' : 'none';
-      var fanEl = document.getElementById('sceneFan');
-      if (fanEl) {
-        /* 不能用 hidden 属性：全局 reset 的 img{display:block} 会盖掉 UA 的 [hidden] 样式 */
-        fanEl.style.display = wp.fan ? '' : 'none';
-        if (wp.fan && fanEl.getAttribute('src') !== wp.fan) fanEl.src = wp.fan;
-      }
       var rainC = document.getElementById('sceneRain');
       if (rainC) rainC.style.display = (wp.rain === false) ? 'none' : '';
       if (sceneImg.getAttribute('src') === wp.src) return;

@@ -1008,22 +1008,6 @@ body.music-page .nav__text { color: inherit; }
 .scene__layer--cafe { inset: -60px; }
 .scene__layer--cafe img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Bunk 壁纸的台扇：位置/尺寸按原壁纸 1920×1080 图内坐标换算（图内圆心 72.7%/41.0%、直径 3.1%，
-   再经图层盒 cover 映射：盒 3960×2280、缩放 2.1111、水平居中裁切），随底图一起 cover */
-.scene__layer--cafe .scene__fan {
-  position: absolute;
-  left: 73.2%;
-  top: 41%;
-  width: 3.2%;
-  height: auto;
-  aspect-ratio: 1;
-  object-fit: contain;
-  transform: translate(-50%, -50%);
-  animation: fan-spin 0.9s linear infinite;
-  pointer-events: none;
-}
-@keyframes fan-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
-
 /* 霓虹灯光晕：屋顶招牌 + 窗口 LO-FI 杯（百分比坐标对齐底图） */
 .scene__glow {
   position: absolute;
@@ -1511,7 +1495,7 @@ body.music-page .focus-player {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scene__glow, .scene__stars i, .scene__fan { animation: none !important; }
+  .scene__glow, .scene__stars i { animation: none !important; }
   .scene__stars, .scene__rain { display: none; }
   .page-veil { transition: none; }
   .page-veil--enter { animation: none; }
