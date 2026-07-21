@@ -14,19 +14,18 @@
   <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body class="music-page">
-  <!-- 动态壁纸：Wallpaper Engine 场景壁纸的浏览器分层重建 -->
+  <!-- 页面过渡纱幕：进入时夜色淡出；回首页时换粉白盖上 -->
+  <div class="page-veil page-veil--night page-veil--enter" aria-hidden="true"></div>
+
+  <!-- 动态壁纸：Wallpaper Engine 场景壁纸的浏览器重建 -->
   <div class="scene" id="scene" aria-hidden="true">
     <div class="scene__stage" id="sceneStage">
-      <div class="scene__layer scene__layer--sky" data-depth="8"><img src="assets/img/scene/sky.jpg" alt="" /></div>
+      <div class="scene__layer scene__layer--cafe" data-depth="12"><img src="assets/img/scene/cafe.jpg" alt="" /><img class="scene__fan" id="sceneFan" src="assets/img/scene/bunk-fan.png" alt="" style="display:none" /></div>
+      <div class="scene__glow scene__glow--sign"></div>
+      <div class="scene__glow scene__glow--cup"></div>
       <div class="scene__stars" id="sceneStars"></div>
-      <span class="scene__meteor" id="sceneMeteor"></span>
-      <div class="scene__layer scene__layer--buildings" data-depth="15"><img src="assets/img/scene/buildings.webp" alt="" /></div>
-      <div class="scene__layer scene__layer--railing" data-depth="25"><img src="assets/img/scene/railing.webp" alt="" /></div>
-      <div class="scene__layer scene__layer--curtain" data-depth="40"><img class="anim-sway" src="assets/img/scene/curtain-r.webp" alt="" /></div>
-      <div class="scene__layer scene__layer--girl" data-depth="30"><img class="anim-breathe" src="assets/img/scene/girl.webp" alt="" /></div>
-      <div class="scene__layer scene__layer--chair" data-depth="50"><img class="anim-swing" src="assets/img/scene/chair-r.webp" alt="" /></div>
-      <div class="scene__layer scene__layer--bag" data-depth="50"><img src="assets/img/scene/bag.webp" alt="" /></div>
     </div>
+    <canvas class="scene__rain" id="sceneRain"></canvas>
   </div>
 
   <!-- 飘落的花瓣层（JS 生成，尊重减少动态偏好） -->
@@ -36,44 +35,52 @@
   <canvas class="fx-canvas" id="fxCanvas" aria-hidden="true"></canvas>
 
   <!-- 左上角：回小窝的头像 -->
-  <a class="focus-avatar" href="index.html" title="回到小窝" aria-label="回到首页">
-    <img src="assets/img/avatar.jpg" alt="小圣的头像" />
-  </a>
+  <div class="focus-corner">
+    <a class="focus-avatar" href="index.html" title="回到小窝" aria-label="回到首页">
+      <img src="assets/img/avatar.jpg" alt="小圣的头像" />
+    </a>
+  </div>
+
+  <!-- 专注大时钟：开始专注后显示在顶部约 1/3 处 -->
+  <div class="focus-bigclock" id="focusBigClock" aria-hidden="true">
+    <p class="focus-bigclock__time" id="bigClockTime">25:00</p>
+    <p class="focus-bigclock__status" id="bigClockStatus"></p>
+  </div>
 
   <main class="focus-wrap">
-    <!-- 左下：专注 + TODO -->
-    <section class="focus-left" id="focusPanel" aria-label="专注时间与计划">
-      <div class="focus-timer">
-        <p class="focus-label">专注时间 <span class="focus-status" id="focusStatus"></span></p>
-        <p class="focus-clock" id="focusClock">25:00</p>
-        <div class="focus-presets" id="focusPresets">
-          <button type="button" data-min="15">15</button>
-          <button type="button" data-min="25" class="is-on">25</button>
-          <button type="button" data-min="45">45</button>
-          <button type="button" data-min="60">60</button>
-        </div>
-        <div class="focus-actions">
-          <button type="button" class="focus-start" id="focusStart">开始专注</button>
-          <button type="button" class="focus-reset" id="focusReset">重置</button>
-        </div>
+    <!-- Dock 弹层：专注时间 -->
+    <section class="dock-panel dock-panel--focus" id="panelFocus" aria-label="专注时间">
+      <p class="focus-label">专注时间 <span class="focus-status" id="focusStatus"></span></p>
+      <p class="focus-clock" id="focusClock">25:00</p>
+      <div class="focus-presets" id="focusPresets">
+        <button type="button" data-min="15">15</button>
+        <button type="button" data-min="25" class="is-on">25</button>
+        <button type="button" data-min="45">45</button>
+        <button type="button" data-min="60">60</button>
       </div>
-      <div class="focus-todo">
-        <p class="focus-label">今日计划 <span class="focus-hint">点一下划掉</span></p>
-        <ul class="todo-list" id="todoList"></ul>
-        <form class="todo-form" id="todoForm">
-          <input id="todoInput" type="text" maxlength="40" placeholder="想做点什么？" autocomplete="off" aria-label="新计划" />
-          <button type="submit" aria-label="添加计划">＋</button>
-        </form>
+      <div class="focus-actions">
+        <button type="button" class="focus-start" id="focusStart">开始专注</button>
+        <button type="button" class="focus-reset" id="focusReset">重置</button>
       </div>
     </section>
 
-    <!-- 右下：播放器（DOM id 与 music.js 约定保持一致） -->
-    <aside class="player focus-player" id="player" aria-label="音乐播放器">
+    <!-- Dock 弹层：Todo 计划 -->
+    <section class="dock-panel dock-panel--todo" id="panelTodo" aria-label="今日计划">
+      <p class="focus-label todo-title">Todo <span class="focus-hint">点一下划掉</span></p>
+      <ul class="todo-list" id="todoList"></ul>
+      <form class="todo-form" id="todoForm">
+        <input id="todoInput" type="text" maxlength="40" placeholder="想做点什么？" autocomplete="off" aria-label="新计划" />
+        <button type="submit" aria-label="添加计划">＋</button>
+      </form>
+    </section>
+
+    <!-- Dock 弹层：播放器（DOM id 与 music.js 约定保持一致） -->
+    <aside class="player focus-player dock-panel dock-panel--player" id="player" aria-label="音乐播放器">
       <div class="focus-player__top">
         <img class="player__disc" src="assets/img/好可爱.jpg" alt="播放器封面" />
         <div class="player__info">
-          <h3 id="trackTitle">加载中…</h3>
-          <p id="trackArtist">♪</p>
+          <h3 id="trackTitle">来听歌吧 ♪</h3>
+          <p id="trackArtist">粘贴网易云歌单链接或 ID</p>
           <div class="player__lyric" id="lyricLine">♪</div>
         </div>
       </div>
@@ -93,24 +100,48 @@
         </div>
         <div class="player__volume">
           <span>🔈</span>
-          <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" aria-label="音量" />
+          <input type="range" id="volume" min="0" max="1" step="0.01" value="0.3" aria-label="音量" />
         </div>
       </div>
       <details class="player__more">
         <summary>歌单 · 网易云</summary>
-        <div class="music__loader">
-          <input id="playlistInput" type="text" placeholder="粘贴网易云歌单 / 歌曲链接或 ID" aria-label="网易云歌单链接或 ID" />
-          <button id="playlistBtn" type="button">加载</button>
-          <button id="playlistReset" type="button" class="ghost" hidden>↩ 内置</button>
+        <div class="player__more-body" id="playerMoreBody">
+          <div class="music__loader">
+            <input id="playlistInput" type="text" placeholder="粘贴网易云歌单 / 歌曲链接或 ID" aria-label="网易云歌单链接或 ID" />
+            <button id="playlistBtn" type="button">加载</button>
+            <button id="playlistReset" type="button" class="ghost" hidden>↩ 默认</button>
+          </div>
+          <p class="player__list-title" id="listTitle">默认歌单</p>
+          <ul class="player__list" id="playerList"></ul>
+          <p class="player__credit">
+            默认歌单是小圣自己下载的歌 ♪ 网易云歌单由 <a href="https://github.com/injahow/meting-api" target="_blank" rel="noopener">Meting API</a> 提供解析，版权歌曲可能只能试听一小段哦
+          </p>
         </div>
-        <p class="player__list-title" id="listTitle">内置音乐</p>
-        <ul class="player__list" id="playerList"></ul>
-        <p class="player__credit">
-          本地歌单是小圣自己下载的歌 ♪ 网易云歌单由 <a href="https://github.com/injahow/meting-api" target="_blank" rel="noopener">Meting API</a> 提供解析，版权歌曲可能只能试听一小段哦
-        </p>
       </details>
     </aside>
+
+    <!-- Dock 弹层：更换壁纸（预设壁纸由 focus.js 的 WALLPAPERS 驱动） -->
+    <div class="dock-panel dock-panel--wp" id="wpPanel" role="dialog" aria-label="更换壁纸">
+      <p class="wp-panel__title">更换壁纸</p>
+      <div class="wp-grid" id="wpGrid"></div>
+    </div>
   </main>
+
+  <!-- 底部 Dock：macOS 风功能栏，点图标弹出对应面板 -->
+  <nav class="dock" id="dock" aria-label="功能栏">
+    <button class="dock__item" type="button" data-panel="panelFocus" aria-label="专注时间" aria-pressed="false">
+      <span class="dock__icon">🍅</span><span class="dock__tip">专注</span>
+    </button>
+    <button class="dock__item" type="button" data-panel="panelTodo" aria-label="今日计划" aria-pressed="false">
+      <span class="dock__icon">✏️</span><span class="dock__tip">计划</span>
+    </button>
+    <button class="dock__item" type="button" data-panel="player" aria-label="音乐播放器" aria-pressed="false">
+      <span class="dock__icon">🎵</span><span class="dock__tip">音乐</span>
+    </button>
+    <button class="dock__item" type="button" data-panel="wpPanel" aria-label="更换壁纸" aria-pressed="false">
+      <span class="dock__icon">🖼️</span><span class="dock__tip">壁纸</span>
+    </button>
+  </nav>
 
   <script src="assets/js/main.js"></script>
   <script src="assets/js/music.js"></script>

@@ -7,6 +7,27 @@
 
   var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+  /* ---------- 页面过渡：盖上对应色调的纱幕再跳转 ----------
+     去音乐页 = night（入夜），回首页 = day（天亮）；暴露给 pet.js 的 ▶ 按钮复用 */
+  function leaveTo(url, mood) {
+    var veil = document.querySelector(".page-veil");
+    if (!veil || reduceMotion) { location.href = url; return; }
+    veil.classList.remove("page-veil--enter", "page-veil--night", "page-veil--day");
+    veil.classList.add("page-veil--" + mood);
+    void veil.offsetWidth;   // 强制重排，让 transition 从 0 起步
+    veil.style.opacity = "1";
+    setTimeout(function () { location.href = url; }, 400);
+  }
+  window.shengLeave = leaveTo;
+
+  // 导航「音乐」等指向 music.html 的链接统一走入夜过渡
+  Array.prototype.forEach.call(document.querySelectorAll('a[href="music.html"]'), function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      leaveTo("music.html", "night");
+    });
+  });
+
   /* ---------- 主题切换（记忆偏好） ---------- */
   var root = document.documentElement;
   var toggle = document.getElementById("themeToggle");

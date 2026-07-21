@@ -14,6 +14,9 @@
   <link rel="stylesheet" href="assets/css/style.css" />
 </head>
 <body>
+  <!-- 页面过渡纱幕：进入时粉白淡出；去音乐页时换夜色盖上 -->
+  <div class="page-veil page-veil--day page-veil--enter" aria-hidden="true"></div>
+
   <!-- 飘落的花瓣层（JS 生成，尊重减少动态偏好） -->
   <div class="petal-layer" id="petalLayer" aria-hidden="true"></div>
 
@@ -40,7 +43,6 @@
         </button>
       </div>
       <nav class="nav__links">
-        <a href="#likes"><span class="nav__icon">♥</span><span class="nav__text">喜好</span></a>
         <a href="#corner"><span class="nav__icon">✦</span><span class="nav__text">小角落</span></a>
         <a href="#contact"><span class="nav__icon">✉</span><span class="nav__text">联系</span></a>
         <a href="music.html"><span class="nav__icon">🎵</span><span class="nav__text">音乐</span></a>
@@ -70,38 +72,9 @@
           <a class="btn btn--ghost" href="#contact">来找我玩</a>
         </div>
       </div>
-      <a class="hero__scroll-hint" href="#likes" aria-label="向下滚动">
+      <a class="hero__scroll-hint" href="#corner" aria-label="向下滚动">
         <span></span>
       </a>
-    </section>
-
-    <!-- 喜好 -->
-    <section class="section section--alt" id="likes">
-      <div class="container">
-        <h2 class="section__title reveal">喜欢的东西</h2>
-        <div class="likes__grid">
-          <article class="like-card reveal" style="--d:.05s">
-            <div class="like-card__icon">🌸</div>
-            <h3>可爱的东西</h3>
-            <p>粉色、毛绒、蝴蝶结、小裙子……一切软乎乎的东西都能治愈我。</p>
-          </article>
-          <article class="like-card reveal" style="--d:.15s">
-            <div class="like-card__icon">💻</div>
-            <h3>折腾代码</h3>
-            <p>给自己写点小工具、搭个小网站，看着想法一点点变成现实最开心了。</p>
-          </article>
-          <article class="like-card reveal" style="--d:.25s">
-            <div class="like-card__icon">🎮</div>
-            <h3>游戏</h3>
-            <p>闲暇时玩一玩游戏，在别的世界里冒冒险、种种田、看看风景。</p>
-          </article>
-          <article class="like-card reveal" style="--d:.35s">
-            <div class="like-card__icon">🛏️</div>
-            <h3>睡个好觉</h3>
-            <p>窝在被子里什么都不想，是世界上最简单也最幸福的事之一。</p>
-          </article>
-        </div>
-      </div>
     </section>
 
     <!-- 小角落（占位，以后慢慢加东西） -->

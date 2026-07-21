@@ -104,7 +104,8 @@
   playBtn.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
   playBtn.addEventListener('click', function (e) {
     e.stopPropagation();
-    location.href = 'music.html';
+    if (window.shengLeave) window.shengLeave('music.html', 'night');   // 走入夜过渡
+    else location.href = 'music.html';
   });
 
   /* 表面位置 → 视口坐标（pet 中心） */

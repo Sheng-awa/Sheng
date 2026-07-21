@@ -1,11 +1,12 @@
 /* ============================================================
    小圣的播放器 · music.js
    双音源播放器：
-   - 内置本地曲目（assets/music/，Kevin MacLeod CC BY 4.0）
+   - 默认歌单：小圣自己的歌（assets/music/local/）
    - 网易云歌单 / 单曲（粘贴链接或 ID，经 Meting 公共 API 解析，
      封面 / 歌词 / 播放流自动来；版权歌可能只有试听）
    功能：播放列表 / 进度点按 / 音量 / 滚动歌词 / 频谱可视化
    （跨域音频拿不到频谱数据时用呼吸灯效的模拟频谱兜底）
+   注意：进页不自动播放，点 ▶ 或加载歌单后才开始；默认音量 30%
    ============================================================ */
 (function () {
   'use strict';
@@ -14,14 +15,13 @@
   var API = 'https://api.injahow.cn/meting/';   // Meting 公共 API（injahow 开源版）
   var DEFAULT_COVER = 'assets/img/好可爱.jpg';
 
-  /* 内置曲目：小圣自己的歌（想加歌就往这里加一行，lrc 可选） */
+  /* 默认歌单：小圣自己的歌（想加歌就往这里加一行，lrc 可选） */
   var LOCAL_TRACKS = [
     { title: '拼接乌托邦',                        artist: 'Ciyo / 见过夏天P / 乌托邦P', src: 'assets/music/local/pinjie-wutuobang.mp3',      lrc: 'assets/music/local/pinjie-wutuobang.lrc' },
     { title: 'Numb Little Bug',                   artist: 'Em Beihold',                 src: 'assets/music/local/numb-little-bug.mp3',        lrc: 'assets/music/local/numb-little-bug.lrc' },
     { title: 'Shut up My Moms Calling',           artist: 'Hotel Ugly',                 src: 'assets/music/local/shut-up-my-moms-calling.mp3',lrc: 'assets/music/local/shut-up-my-moms-calling.lrc' },
     { title: 'You Are Not Alone',                 artist: 'Michael Jackson',            src: 'assets/music/local/you-are-not-alone.mp3',      lrc: 'assets/music/local/you-are-not-alone.lrc' },
-    { title: 'death bed (coffee for your head)',  artist: 'Powfu / beabadoobee',        src: 'assets/music/local/death-bed.mp3',              lrc: 'assets/music/local/death-bed.lrc' },
-    { title: '我要你',                            artist: '任素汐',                     src: 'assets/music/local/wo-yao-ni.mp3',              lrc: null }
+    { title: 'death bed (coffee for your head)',  artist: 'Powfu / beabadoobee',        src: 'assets/music/local/death-bed.mp3',              lrc: 'assets/music/local/death-bed.lrc' }
   ];
 
   var MAX_LIST = 100;   // 歌单太长只显示前 100 首
@@ -48,9 +48,55 @@
   var viz = document.getElementById('playerViz');
   if (!player || !viz) return;
 
-  var audio = new Audio();
-  audio.preload = 'metadata';
-  audio.volume = parseFloat(volumeEl.value);
+  /* ---------- 发声方案 ----------
+     浏览器规矩：跨域无 CORS（含 file:// 直开本地文件）的音频一经
+     createMediaElementSource 接入 Web Audio 就会被整体静音。
+     所以只有同源曲目走接了频谱的 audioFx，其余走直连扬声器的 audioPlain。 */
+  var audio = null;        // 当前正在用的元素（下面两个之一）
+  var audioPlain = null;   // 跨域 / file:// 曲目：直连，频谱走模拟
+  var audioFx = null;      // 同源曲目：接 Web Audio 频谱
+  var actx = null, analyser = null, freq = null;
+
+  function canRoute(src) {
+    try {
+      if (location.protocol === 'file:') return false;  // file:// 一律直连
+      return new URL(src, location.href).origin === location.origin;
+    } catch (e) { return false; }
+  }
+
+  function attachGraph(el) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    try {
+      actx = new AC();
+      if (actx.state === 'suspended') actx.resume();
+      var src = actx.createMediaElementSource(el);
+      analyser = actx.createAnalyser();
+      analyser.fftSize = 128;
+      analyser.smoothingTimeConstant = 0.8;
+      src.connect(analyser);
+      analyser.connect(actx.destination);
+      freq = new Uint8Array(analyser.frequencyBinCount);
+    } catch (e) { actx = null; analyser = null; }
+  }
+
+  function useAudio(el) {
+    if (audio === el) return;
+    if (audio) audio.pause();
+    audio = el;
+    audio.volume = parseFloat(volumeEl.value);
+  }
+
+  /* 按曲目来源挑选发声元素（在设置 src 之前调用） */
+  function prepareElement(src) {
+    if (canRoute(src)) {
+      if (!audioFx) { audioFx = wireAudio(new Audio()); attachGraph(audioFx); }
+      useAudio(audioFx);
+    } else {
+      if (!audioPlain) audioPlain = wireAudio(new Audio());
+      useAudio(audioPlain);
+    }
+  }
 
   /* ---------- 状态 ---------- */
   var tracks = [];        // {title, artist, src, cover, lrc}
@@ -116,6 +162,7 @@
     if (!tracks.length) return;
     idx = (i + tracks.length) % tracks.length;
     var t = tracks[idx];
+    prepareElement(t.src);
     audio.src = t.src;
     titleEl.textContent = t.title;
     artistEl.textContent = t.artist;
@@ -145,12 +192,14 @@
   }
 
   function play() {
-    ensureCtx();
+    if (!audio) return;
+    if (actx && actx.state === 'suspended') actx.resume();
     var p = audio.play();
     if (p && p.catch) p.catch(function () { needGesture(); });
   }
 
   function toggle() {
+    if (!audio) return;
     if (audio.paused) play();
     else audio.pause();
   }
@@ -158,29 +207,46 @@
   btnPlay.addEventListener('click', toggle);
   btnPrev.addEventListener('click', function () { load(idx - 1, true); });
   btnNext.addEventListener('click', function () { load(idx + 1, true); });
-  audio.addEventListener('ended', function () { load(idx + 1, true); });
 
-  /* 播放失败（VIP 无权限 / 链接失效）：标记并自动跳下一首 */
-  audio.addEventListener('error', function () {
-    var li = listEl.children[idx];
-    if (li) li.classList.add('is-error');
-    if (tracks.length > 1 && errStreak < 4) {
-      errStreak++;
-      load(idx + 1, true);
-    }
-  });
-  audio.addEventListener('playing', function () { errStreak = 0; });
+  /* 给发声元素统一接事件（同源 / 跨域两个元素共用一套逻辑） */
+  function wireAudio(el) {
+    el.preload = 'metadata';
+    el.volume = parseFloat(volumeEl.value);
 
-  audio.addEventListener('play', function () {
-    player.classList.add('is-playing');
-    btnPlay.textContent = '⏸';
-    btnPlay.classList.remove('needs-gesture');
-    btnPlay.title = '播放 / 暂停';
-  });
-  audio.addEventListener('pause', function () {
-    player.classList.remove('is-playing');
-    btnPlay.textContent = '▶';
-  });
+    el.addEventListener('ended', function () { load(idx + 1, true); });
+
+    /* 播放失败（VIP 无权限 / 链接失效）：标记并自动跳下一首 */
+    el.addEventListener('error', function () {
+      var li = listEl.children[idx];
+      if (li) li.classList.add('is-error');
+      if (tracks.length > 1 && errStreak < 4) {
+        errStreak++;
+        load(idx + 1, true);
+      }
+    });
+    el.addEventListener('playing', function () { errStreak = 0; });
+
+    el.addEventListener('play', function () {
+      player.classList.add('is-playing');
+      btnPlay.textContent = '⏸';
+      btnPlay.classList.remove('needs-gesture');
+      btnPlay.title = '播放 / 暂停';
+    });
+    el.addEventListener('pause', function () {
+      player.classList.remove('is-playing');
+      btnPlay.textContent = '▶';
+    });
+
+    el.addEventListener('loadedmetadata', function () {
+      totalEl.textContent = fmt(el.duration);
+    });
+    el.addEventListener('timeupdate', function () {
+      curEl.textContent = fmt(el.currentTime);
+      if (el.duration) barEl.style.width = (el.currentTime / el.duration * 100) + '%';
+      syncLyric();
+    });
+    return el;
+  }
 
   /* ---------- 歌词 ---------- */
   function setLyric(map, i) {
@@ -248,24 +314,17 @@
     return m + ':' + (ss < 10 ? '0' : '') + ss;
   }
 
-  audio.addEventListener('loadedmetadata', function () {
-    totalEl.textContent = fmt(audio.duration);
-  });
-  audio.addEventListener('timeupdate', function () {
-    curEl.textContent = fmt(audio.currentTime);
-    if (audio.duration) barEl.style.width = (audio.currentTime / audio.duration * 100) + '%';
-    syncLyric();
-  });
-
   progressEl.addEventListener('click', function (e) {
-    if (!audio.duration) return;
+    if (!audio || !audio.duration) return;
     var rect = progressEl.getBoundingClientRect();
     var ratio = Math.min(Math.max((e.clientX - rect.left) / rect.width, 0), 1);
     audio.currentTime = ratio * audio.duration;
   });
 
   volumeEl.addEventListener('input', function () {
-    audio.volume = parseFloat(volumeEl.value);
+    var v = parseFloat(volumeEl.value);
+    if (audioPlain) audioPlain.volume = v;
+    if (audioFx) audioFx.volume = v;
   });
 
   /* ---------- 网易云歌单 / 单曲 ---------- */
@@ -278,7 +337,7 @@
     return null;
   }
 
-  function loadNetease(type, id) {
+  function loadNetease(type, id, autoplay) {
     setListTitle('正在加载网易云' + (type === 'song' ? '单曲' : '歌单') + '…');
     plBtn.disabled = true;
     fetch(API + '?server=netease&type=' + type + '&id=' + id)
@@ -294,7 +353,7 @@
         plReset.hidden = false;
         setListTitle('网易云' + (type === 'song' ? '单曲' : '歌单') + ' · ' + tracks.length + ' 首（版权歌可能只有试听）');
         renderList();
-        load(0, true);
+        load(0, autoplay !== false);
       })
       .catch(function () {
         plBtn.disabled = false;
@@ -302,6 +361,7 @@
       });
   }
 
+  /* 默认歌单：小圣自己的歌 */
   function loadLocal() {
     tracks = LOCAL_TRACKS.map(function (t) {
       return { title: t.title, artist: t.artist, src: t.src, cover: DEFAULT_COVER, lrc: t.lrc || null };
@@ -309,7 +369,7 @@
     source = 'local';
     store.set({ source: 'local' });
     plReset.hidden = true;
-    setListTitle('内置音乐');
+    setListTitle('默认歌单');
     renderList();
   }
 
@@ -327,27 +387,7 @@
     load(0, false);
   });
 
-  /* ---------- 频谱可视化 ---------- */
-  var actx = null, analyser = null, freq = null;
-
-  function ensureCtx() {
-    if (actx) {
-      if (actx.state === 'suspended') actx.resume();
-      return;
-    }
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (!AC) return;
-    try {
-      actx = new AC();
-      var src = actx.createMediaElementSource(audio);
-      analyser = actx.createAnalyser();
-      analyser.fftSize = 128;
-      analyser.smoothingTimeConstant = 0.8;
-      src.connect(analyser);
-      analyser.connect(actx.destination);
-      freq = new Uint8Array(analyser.frequencyBinCount);
-    } catch (e) { actx = null; analyser = null; }
-  }
+  /* ---------- 频谱可视化（actx / analyser / freq 在顶部发声方案里声明） ---------- */
 
   var vctx = viz.getContext('2d');
   var BAR_COUNT = 42;
@@ -370,11 +410,12 @@
     grad.addColorStop(0, c1);
     grad.addColorStop(1, c2);
 
+    var playing = audio && !audio.paused;
     var real = false;
-    if (analyser && !audio.paused) {
+    if (analyser && audio === audioFx && playing) {
       analyser.getByteFrequencyData(freq);
       for (var z = 0; z < freq.length; z++) {
-        if (freq[z] > 4) { real = true; break; }   // 跨域音频全 0，走模拟频谱
+        if (freq[z] > 4) { real = true; break; }   // 拿不到数据就走模拟频谱
       }
     }
 
@@ -386,7 +427,7 @@
       if (real) {
         // 低频段能量最足，往前多取一点
         v = freq[Math.floor(i * freq.length / BAR_COUNT * 0.7)] / 255;
-      } else if (!audio.paused) {
+      } else if (playing) {
         // 模拟频谱：几组正弦叠加，跟着节奏呼吸
         v = 0.1 + 0.42 * Math.abs(Math.sin(i * 0.55 + vizT * 2.6)) *
           (0.55 + 0.45 * Math.sin(vizT * 1.4 + i * 0.3));
@@ -405,20 +446,19 @@
   }
   requestAnimationFrame(drawViz);
 
-  /* ---------- 启动：URL 带 ?playlist= 优先，其次恢复上次的音源 ---------- */
+  /* ---------- 启动：URL 带 ?playlist= 优先，其次恢复上次的音源；都不自动播放 ---------- */
   var queryId = null;
   try { queryId = new URLSearchParams(location.search).get('playlist'); } catch (e) {}
   var parsed = queryId && parseInput(queryId);
   var saved = store.get();
   if (parsed) {
     plInput.value = parsed.id;
-    loadNetease(parsed.type, parsed.id);
+    loadNetease(parsed.type, parsed.id, false);
   } else if (saved && saved.source === 'netease' && saved.id) {
     plInput.value = saved.id;
-    loadNetease(saved.type || 'playlist', saved.id);
+    loadNetease(saved.type || 'playlist', saved.id, false);
   } else {
     loadLocal();
-    load(0, false);
-    play();
+    load(0, false);   // 显示第一首信息，但不自动播放
   }
 })();

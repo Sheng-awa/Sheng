@@ -465,37 +465,6 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
   background: linear-gradient(90deg, var(--accent), var(--lavender));
 }
 
-/* ---------- 喜好卡片 ---------- */
-.likes__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 22px;
-}
-
-.like-card {
-  background: var(--card);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
-  padding: 32px 26px;
-  text-align: center;
-  transition: transform 0.5s var(--ease), box-shadow 0.5s var(--ease),
-    background-color var(--speed) var(--ease);
-}
-
-.like-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-hover); }
-
-.like-card__icon {
-  font-size: 2.2rem;
-  margin-bottom: 16px;
-  display: inline-block;
-  transition: transform 0.5s var(--ease);
-}
-
-.like-card:hover .like-card__icon { transform: scale(1.18) rotate(-6deg); }
-
-.like-card h3 { font-size: 1.08rem; margin-bottom: 10px; color: var(--accent-deep); }
-.like-card p { font-size: 0.92rem; color: var(--text-soft); }
-
 /* ---------- 小角落 ---------- */
 .corner__card {
   background: var(--card);
@@ -917,7 +886,7 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 
 /* ---------- 音乐页：Wallpaper 壁纸背景 + 玻璃拟态 ---------- */
 body.music-page {
-  background: #16222e url('../img/music-bg.jpg') center / cover no-repeat fixed;
+  background: #101828 url('../img/scene/cafe.jpg') center / cover no-repeat fixed;
 }
 
 /* 压暗层：保证文字可读（在壁纸之上、内容之下） */
@@ -1010,17 +979,17 @@ body.music-page .nav__logo-text,
 body.music-page .nav__text { color: inherit; }
 
 /* ============================================================
-   听歌 + 专注页：动态壁纸场景（Wallpaper Engine 分层重建）
-   - 舞台固定为 3840×2160（原壁纸场景空间），JS 按 cover 规则缩放
-   - 各层按原 scene.json 坐标摆放，视差由 focus.js 平移 wrapper，
-     CSS 动画只作用在内部 img 上，两者互不冲突
+   听歌 + 专注页：动态壁纸场景（Wallpaper Engine 重建 · Lo-Fi 咖啡店）
+   - 底图 = workshop 2370927443 的 Base Image（Neon cafe，3840×2160）
+   - 舞台固定 3840×2160 按 cover 缩放；底图外扩一圈，视差不露边
+   - 动效 = 霓虹灯光晕闪烁 + 暖色萤火（focus.js 生成）+ Canvas 雨丝
    ============================================================ */
 .scene {
   position: fixed;
   inset: 0;
   z-index: -2;
   overflow: hidden;
-  background: #16222e;
+  background: #101828;
 }
 
 .scene__stage {
@@ -1035,68 +1004,90 @@ body.music-page .nav__text { color: inherit; }
 .scene__layer { position: absolute; will-change: transform; }
 .scene__layer img { display: block; width: 100%; height: auto; }
 
-/* 天空外扩一圈，视差移动时不露边 */
-.scene__layer--sky { inset: -60px; }
-.scene__layer--sky img { width: 100%; height: 100%; object-fit: cover; }
+/* 咖啡店底图：外扩一圈，cover 铺满 */
+.scene__layer--cafe { inset: -60px; }
+.scene__layer--cafe img { width: 100%; height: 100%; object-fit: cover; }
 
-/* 坐标 = 原壁纸 scene.json（中心锚定已换算为左上） */
-.scene__layer--buildings { left: -92px; top: 360px; width: 3971px; }
-.scene__layer--railing { left: -184px; top: -114px; width: 4200px; }
-.scene__layer--curtain { left: 2152px; top: 144px; width: 2850px; }
-.scene__layer--girl { left: 1266px; top: 246px; width: 1532px; }
-.scene__layer--chair { left: 2586px; top: -162px; width: 2312px; }
-.scene__layer--bag { left: -1163px; top: -297px; width: 3302px; }
+/* Bunk 壁纸的台扇：位置/尺寸按原壁纸 1920×1080 图内坐标换算（图内圆心 72.7%/41.0%、直径 3.1%，
+   再经图层盒 cover 映射：盒 3960×2280、缩放 2.1111、水平居中裁切），随底图一起 cover */
+.scene__layer--cafe .scene__fan {
+  position: absolute;
+  left: 73.2%;
+  top: 41%;
+  width: 3.2%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  transform: translate(-50%, -50%);
+  animation: fan-spin 0.9s linear infinite;
+  pointer-events: none;
+}
+@keyframes fan-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 
-/* 少女呼吸 / 窗帘摆动 / 吊椅轻晃 */
-.anim-breathe { transform-origin: 50% 100%; animation: girl-breathe 4.6s ease-in-out infinite; }
-@keyframes girl-breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.014); } }
+/* 霓虹灯光晕：屋顶招牌 + 窗口 LO-FI 杯（百分比坐标对齐底图） */
+.scene__glow {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(60px);
+  animation: neon-flicker 5s linear infinite;
+}
+.scene__glow--sign {
+  left: 33%; top: 5%;
+  width: 34%; height: 9%;
+  background: radial-gradient(closest-side, rgba(255, 170, 80, 0.34), transparent 72%);
+}
+.scene__glow--cup {
+  left: 66.5%; top: 24%;
+  width: 12%; height: 15%;
+  background: radial-gradient(closest-side, rgba(90, 210, 255, 0.38), transparent 72%);
+  animation-delay: -2.3s;
+  animation-duration: 6.5s;
+}
+@keyframes neon-flicker {
+  0%, 100% { opacity: 0.85; }
+  8% { opacity: 0.45; }
+  10% { opacity: 0.9; }
+  24% { opacity: 0.7; }
+  46% { opacity: 1; }
+  70% { opacity: 0.6; }
+  72% { opacity: 0.95; }
+}
 
-.anim-sway { transform-origin: 50% 0; animation: curtain-sway 7.5s ease-in-out infinite; }
-@keyframes curtain-sway { 0%, 100% { transform: rotate(-1deg); } 50% { transform: rotate(1.1deg); } }
-
-.anim-swing { transform-origin: 50% 0; animation: chair-swing 6.4s ease-in-out infinite; }
-@keyframes chair-swing { 0%, 100% { transform: rotate(0.8deg); } 50% { transform: rotate(-0.8deg); } }
-
-/* 闪烁星星（focus.js 生成） */
+/* 暖色萤火 / 尘光（focus.js 生成，全高度漂浮） */
 .scene__stars { position: absolute; inset: 0; }
 .scene__stars i {
   position: absolute;
   border-radius: 50%;
-  background: #fff;
+  background: #ffd9a0;
+  box-shadow: 0 0 8px 2px rgba(255, 200, 130, 0.55);
   opacity: 0.15;
   animation: star-twinkle 3s ease-in-out infinite;
 }
-@keyframes star-twinkle { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.95; } }
+@keyframes star-twinkle { 0%, 100% { opacity: 0.1; } 50% { opacity: 0.9; } }
 
-/* 流星：大部分时间透明，一小段划过 */
-.scene__meteor {
+/* 雨丝画布（focus.js 绘制，铺满视口） */
+.scene__rain {
   position: absolute;
-  top: 14%;
-  left: 22%;
-  width: 220px;
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), transparent);
-  opacity: 0;
-  transform: rotate(-32deg);
-  animation: meteor-fall 8s linear infinite;
-}
-@keyframes meteor-fall {
-  0% { opacity: 0; transform: rotate(-32deg) translateX(0); }
-  1.5% { opacity: 1; }
-  7% { opacity: 0; transform: rotate(-32deg) translateX(-560px); }
-  100% { opacity: 0; transform: rotate(-32deg) translateX(-560px); }
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 /* 压暗层减轻一点，让夜景透出来（面板自带玻璃底保证可读） */
 body.music-page::before { background: rgba(14, 20, 32, 0.22); }
 
 /* ---------- 左上角头像（回首页） ---------- */
-.focus-avatar {
+.focus-corner {
   position: fixed;
   top: 22px;
   left: 22px;
   z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.focus-avatar {
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -1108,29 +1099,158 @@ body.music-page::before { background: rgba(14, 20, 32, 0.22); }
 .focus-avatar:hover { transform: scale(1.08) rotate(-3deg); }
 .focus-avatar img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
-/* ---------- 液态玻璃面板公共观感 ---------- */
-body.music-page .focus-left,
-body.music-page .focus-player {
-  background: rgba(24, 32, 48, 0.38);
+/* ---------- 专注大时钟：开始专注后浮在顶部约 1/3 处 ---------- */
+.focus-bigclock {
+  position: fixed;
+  top: 30vh;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  z-index: 15;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+}
+.focus-bigclock.is-on { opacity: 1; transform: translateX(-50%); }
+.focus-bigclock__time {
+  margin: 0;
+  font-size: clamp(3.4rem, 9vw, 5.6rem);
+  font-weight: 800;
+  line-height: 1;
+  color: #fdf7fb;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.55), 0 1px 6px rgba(0, 0, 0, 0.4);
+}
+.focus-bigclock__status {
+  margin: 8px 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(255, 214, 232, 0.85);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Dock 弹层：统一玻璃观感 + 从 dock 上方弹出 ---------- */
+.dock-panel {
+  position: fixed;
+  left: 50%;
+  bottom: 96px;
+  z-index: 29;
+  padding: 15px 15px 13px;
+  background: rgba(24, 32, 48, 0.42);
   backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: var(--radius-lg);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
   color: #f4eef3;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(16px) scale(0.94);
+  transform-origin: bottom center;
+  transition: opacity 0.28s var(--ease), transform 0.28s var(--ease), visibility 0s 0.28s;
 }
+.dock-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%);
+  transition: opacity 0.28s var(--ease), transform 0.28s var(--ease);
+}
+.dock-panel--focus { width: 272px; }
+.dock-panel--todo { width: 300px; }
+.dock-panel--wp { width: 268px; }
 
-.focus-wrap { display: contents; }
-
-/* ---------- 左下：专注 + TODO ---------- */
-body.music-page .focus-left {
+/* ---------- 底部 Dock：macOS 风功能栏（hover 放大由 focus.js 平滑驱动） ---------- */
+.dock {
   position: fixed;
-  left: 28px;
-  bottom: 28px;
-  z-index: 10;
-  width: 320px;
-  padding: 20px 20px 16px;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 24px;
+  background: rgba(24, 32, 48, 0.42);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.4);
 }
+.dock__item {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transform-origin: bottom center;
+  transition: background 0.18s var(--ease);
+}
+.dock__item:hover { background: rgba(255, 255, 255, 0.2); }
+.dock__item.is-active {
+  background: linear-gradient(135deg, var(--accent), var(--lavender));
+  border-color: transparent;
+}
+.dock__tip {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(3px);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(24, 32, 48, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #fdf7fb;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s var(--ease), transform 0.18s var(--ease);
+}
+.dock__item:hover .dock__tip { opacity: 1; transform: translateX(-50%); }
+
+/* 更换壁纸弹层：继承 .dock-panel，内部网格样式如下 */
+.wp-panel__title {
+  margin: 0 2px 10px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: rgba(244, 238, 243, 0.62);
+}
+.wp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.wp-item {
+  position: relative;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  background: none;
+  transition: border-color var(--speed) var(--ease), transform var(--speed) var(--ease);
+}
+.wp-item:hover { transform: translateY(-2px); }
+.wp-item.is-active { border-color: rgba(255, 170, 200, 0.85); }
+.wp-item img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
+.wp-item span {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 8px 6px 4px;
+  font-size: 0.68rem;
+  color: #fff;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.55));
+}
+
+/* ---------- 液态玻璃观感由 .dock-panel 统一承担 ---------- */
+.focus-wrap { display: contents; }
 
 .focus-label {
   display: flex;
@@ -1146,9 +1266,9 @@ body.music-page .focus-left {
 .focus-status, .focus-hint { font-weight: 600; font-size: 0.74rem; color: rgba(255, 196, 218, 0.75); }
 
 .focus-clock {
-  margin: 0 0 12px;
+  margin: 0 0 10px;
   text-align: center;
-  font-size: 2.9rem;
+  font-size: 2.35rem;
   font-weight: 800;
   line-height: 1;
   color: #fdf7fb;
@@ -1199,7 +1319,8 @@ body.music-page .focus-left {
 .focus-reset { background: rgba(255, 255, 255, 0.12); color: #ffd7e8; }
 .focus-start:hover, .focus-reset:hover { transform: translateY(-2px); }
 
-.focus-todo { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.14); }
+/* Todo 标题：截图同款蓝紫色 */
+.todo-title { color: #7ea8ff; font-size: 0.95rem; letter-spacing: 0.03em; }
 
 .todo-list {
   list-style: none;
@@ -1223,17 +1344,29 @@ body.music-page .focus-left {
   transition: background-color var(--speed) var(--ease);
 }
 .todo-list li:hover { background: rgba(255, 255, 255, 0.08); }
+/* 未完成：蓝色实心圆点（截图同款）；完成：绿勾 + 删除线 */
 .todo-list li::before {
   content: '';
   flex: none;
-  width: 15px;
-  height: 15px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 196, 218, 0.65);
-  transition: background-color var(--speed) var(--ease);
+  background: #6ea8ff;
+  box-shadow: 0 0 7px rgba(110, 168, 255, 0.55);
 }
-.todo-list li.is-done::before { background: var(--accent); border-color: var(--accent); }
-.todo-list li.is-done .todo-text { text-decoration: line-through; opacity: 0.5; }
+.todo-list li.is-done::before {
+  content: '✓';
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: #4ecb8d;
+  font-size: 0.98rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.todo-list li.is-done .todo-text { text-decoration: line-through; color: rgba(244, 238, 243, 0.42); }
 .todo-list .todo-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .todo-list .todo-del {
   border: none;
@@ -1285,22 +1418,17 @@ body.music-page .focus-left {
 }
 .todo-form button:hover { transform: scale(1.1); }
 
-/* ---------- 右下：迷你播放器（复用 .player 玻璃样式，做紧凑覆写） ---------- */
+/* ---------- 播放器：Dock 弹层成员（定位/开关动画由 .dock-panel 承担，这里做紧凑覆写） ---------- */
 body.music-page .focus-player {
-  position: fixed;
-  right: 28px;
-  bottom: 28px;
-  z-index: 10;
-  width: 350px;
+  width: 312px;
   max-width: none;
   margin: 0;
-  padding: 18px;
+  padding: 14px;
   text-align: left;
-  border-color: rgba(255, 255, 255, 0.28);
 }
 
-.focus-player__top { display: flex; align-items: center; gap: 13px; margin-bottom: 10px; }
-.focus-player .player__disc { width: 72px; height: 72px; margin: 0; border-width: 4px; flex: none; }
+.focus-player__top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.focus-player .player__disc { width: 58px; height: 58px; margin: 0; border-width: 3px; flex: none; }
 .focus-player .player__info { min-width: 0; }
 .focus-player .player__info h3 {
   margin: 0;
@@ -1317,7 +1445,7 @@ body.music-page .focus-player {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.focus-player .player__viz { height: 34px; margin-bottom: 6px; }
+.focus-player .player__viz { height: 28px; margin-bottom: 5px; }
 .focus-player .player__times { margin-bottom: 10px; }
 
 .focus-player__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -1328,7 +1456,9 @@ body.music-page .focus-player {
 .focus-player .player__volume input { width: 72px; }
 
 /* 歌单折叠区 */
-.player__more { margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.14); padding-top: 10px; }
+.player__more { margin-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.14); padding-top: 8px; }
+/* 展开/收起由 focus.js 量高度做过渡，避免 details 生硬跳动 */
+.player__more-body { overflow: hidden; transition: height 0.35s var(--ease); }
 .player__more summary {
   cursor: pointer;
   font-size: 0.82rem;
@@ -1347,31 +1477,42 @@ body.music-page .focus-player {
 .player__more .player__list { max-height: 200px; }
 .player__more .player__credit { margin-top: 12px; font-size: 0.72rem; }
 
-/* ---------- 小屏：面板退回普通流，上下排列 ---------- */
+/* ---------- 小屏：dock 与弹层都是浮层，只需收窄限宽 ---------- */
 @media (max-width: 860px) {
-  .focus-wrap {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    gap: 14px;
-    min-height: 100vh;
-    min-height: 100svh;
-    padding: 86px 14px 16px;
-    box-sizing: border-box;
-  }
-  body.music-page .focus-left,
-  body.music-page .focus-player {
-    position: static;
-    width: 100%;
-    max-width: 430px;
-    margin: 0 auto;
-  }
-  .focus-avatar { top: 16px; left: 16px; width: 44px; height: 44px; }
+  .focus-corner { top: 16px; left: 16px; }
+  .focus-avatar { width: 44px; height: 44px; }
+  .dock { gap: 6px; padding: 8px 10px; bottom: 10px; }
+  .dock__item { width: 46px; height: 46px; font-size: 1.3rem; border-radius: 14px; }
+  .dock-panel { bottom: 82px; }
+  .dock-panel--focus { width: min(272px, 88vw); }
+  .dock-panel--todo { width: min(300px, 88vw); }
+  .dock-panel--wp { width: min(268px, 88vw); }
+  body.music-page .focus-player { width: min(312px, 88vw); }
 }
 
 /* ---------- 减少动态偏好：场景静下来，只留静态壁纸 ---------- */
+/* ---------- 页面过渡纱幕：首页 ⇄ 音乐页 ----------
+   去音乐页盖「入夜」深色纱幕，回首页盖「天亮」粉白纱幕；
+   进入页面时 --enter 自动把纱幕淡出（CSS 驱动，不依赖 JS） */
+.page-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.38s ease;
+}
+.page-veil--night { background: linear-gradient(165deg, #262b4a 0%, #15172e 55%, #0e1020 100%); }
+.page-veil--day { background: linear-gradient(165deg, #fff3f7 0%, #ffe7f0 55%, #ffd9e8 100%); }
+.page-veil--enter { animation: page-veil-out 0.6s ease 0.08s both; }
+@keyframes page-veil-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .anim-breathe, .anim-sway, .anim-swing,
-  .scene__stars i, .scene__meteor { animation: none !important; }
-  .scene__meteor, .scene__stars { display: none; }
+  .scene__glow, .scene__stars i, .scene__fan { animation: none !important; }
+  .scene__stars, .scene__rain { display: none; }
+  .page-veil { transition: none; }
+  .page-veil--enter { animation: none; }
 }
