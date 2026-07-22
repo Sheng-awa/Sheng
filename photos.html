@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>相册 ✿ 小圣的小窝</title>
+  <meta name="description" content="小圣的拍立得手帐相册，把喜欢的瞬间贴进来。" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Zhi+Mang+Xing&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body class="photos-page">
+  <!-- 页面过渡纱幕：进入时粉白淡出；回首页同样粉白 -->
+  <div class="page-veil page-veil--day page-veil--enter" aria-hidden="true"></div>
+
+  <!-- 手帐背景：方格纸 + 手绘风小贴纸（纯装饰） -->
+  <div class="scrap-bg" aria-hidden="true">
+    <span class="scrap-sticker scrap-sticker--1">🌸</span>
+    <span class="scrap-sticker scrap-sticker--2">⭐</span>
+    <span class="scrap-sticker scrap-sticker--3">💗</span>
+    <span class="scrap-sticker scrap-sticker--4">🌸</span>
+    <span class="scrap-sticker scrap-sticker--5">✨</span>
+    <span class="scrap-sticker scrap-sticker--6">💮</span>
+  </div>
+
+  <header class="scrap-head">
+    <a class="scrap-home" href="index.html" title="回到小窝">❮ 回小窝</a>
+    <h1 class="scrap-title">小圣的相册</h1>
+    <p class="scrap-sub">把喜欢的瞬间，贴进手帐里 ✿</p>
+  </header>
+
+  <!-- 拍立得瀑布流（album.js 读 photo/photos.json 渲染） -->
+  <main class="scrap-wall" id="scrapWall" aria-label="相册照片墙"></main>
+
+  <!-- Lightbox：点照片看大图 -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="查看大图" aria-hidden="true">
+    <button class="lightbox__close" id="lbClose" type="button" aria-label="关闭">×</button>
+    <button class="lightbox__nav lightbox__nav--prev" id="lbPrev" type="button" aria-label="上一张">‹</button>
+    <figure class="lightbox__stage">
+      <img class="lightbox__img" id="lbImg" src="" alt="相册大图" />
+      <figcaption class="lightbox__cap" id="lbCap"></figcaption>
+    </figure>
+    <button class="lightbox__nav lightbox__nav--next" id="lbNext" type="button" aria-label="下一张">›</button>
+  </div>
+
+  <script src="assets/js/main.js"></script>
+  <script src="assets/js/album.js"></script>
+</body>
+</html>
