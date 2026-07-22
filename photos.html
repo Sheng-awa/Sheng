@@ -50,7 +50,8 @@
     .back-home:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(210, 110, 150, .34); }
 
     /* ---------- 书本外壳（拟物重点） ---------- */
-    .book-wrap { max-width: 1060px; margin: 0 auto; position: relative; }
+    /* 两侧固定留 110px+：书缘标签最深伸出 ~93px，窄窗时书自动变窄、标签永不被裁 */
+    .book-wrap { width: calc(100% - 220px); max-width: 1060px; margin: 0 auto; position: relative; }
     .book {
       position: relative;
       height: clamp(630px, 78vh, 740px);
@@ -59,12 +60,14 @@
       border-radius: 22px;
       box-shadow: 0 24px 55px rgba(178, 110, 140, .28);
     }
-    /* 右侧书页厚度：一叠纸的细边 */
+    /* 右侧书页厚度：一叠纸的细边（加宽出"书口"侧面，标签就插在这叠纸的不同深度） */
     .book::before {
-      content: ''; position: absolute; top: 9px; bottom: 9px; right: -10px; width: 10px;
+      content: ''; position: absolute; top: 9px; bottom: 9px; right: -20px; width: 20px;
       border-radius: 0 6px 6px 0;
-      background: repeating-linear-gradient(180deg, var(--paper-line2) 0 2px, var(--paper-line) 2px 4px);
-      box-shadow: 2px 3px 6px rgba(150, 105, 90, .18);
+      background:
+        linear-gradient(90deg, rgba(150, 105, 90, .16), rgba(150, 105, 90, 0) 55%),
+        repeating-linear-gradient(180deg, var(--paper-line2) 0 2px, var(--paper-line) 2px 4px);
+      box-shadow: 3px 4px 8px rgba(150, 105, 90, .2);
     }
     /* 底部书页厚度 */
     .book::after {
@@ -179,23 +182,26 @@
     .toc-dots { flex: 1; border-bottom: 2px dotted rgba(190, 140, 160, .45); transform: translateY(-5px); }
     .toc-pg { color: #b18f9b; font-size: 1rem; }
 
-    /* ---------- 书缘索引标签：夹在书页里的彩色小标签 ---------- */
-    .book-tabs { position: absolute; top: 0; bottom: 0; right: 0; width: 0; z-index: 0; }
+    /* ---------- 书缘索引标签：贴在书口厚度里的不同层，越靠后的章插得越深 ---------- */
+    .book-tabs { position: absolute; top: 0; bottom: 0; right: 0; width: 0; z-index: 8; }
     .book-tab {
-      position: absolute; right: -26px; width: 78px; height: 44px;
-      border: none; border-radius: 3px 9px 9px 3px; cursor: pointer;
-      font-family: inherit; font-size: .95rem; color: #6b4f5a;
-      background: var(--tab, #f6a6c8); opacity: .9;
-      box-shadow: 2px 3px 8px rgba(150, 95, 120, .25);
+      position: absolute; width: 68px; height: 44px;
+      border: none; border-radius: 2px 8px 8px 2px; cursor: pointer;
+      font-family: inherit; font-size: .92rem; color: #6b4f5a;
+      background: var(--tab, #f6a6c8); opacity: .94;
+      box-shadow: inset 3px 0 4px rgba(120, 70, 90, .12), 2px 3px 8px rgba(150, 95, 120, .28);
       transform: rotate(var(--tr, 0deg));
-      transition: right .25s var(--ease), transform .25s var(--ease), opacity .25s;
+      transition: transform .25s var(--ease), opacity .25s, filter .25s;
     }
-    .book-tab:hover { right: -34px; opacity: 1; }
-    .book-tab.is-current { right: -38px; opacity: 1; transform: rotate(0deg); box-shadow: 3px 4px 12px rgba(150, 95, 120, .35); }
-    .book-tab:nth-child(1) { top: 64px;  --tr: -2deg; }
-    .book-tab:nth-child(2) { top: 122px; --tr: 1.5deg; }
-    .book-tab:nth-child(3) { top: 180px; --tr: -1.5deg; }
-    .book-tab:nth-child(4) { top: 238px; --tr: 2deg; }
+    /* 竖向 = 该页在全书的高度；横向 = 插在书口纸叠的不同深度（目录最浅、恋爱最深），
+       根部从纸叠的对应层里"长"出来，越深的标签伸出书口越长 → 阶梯分层 */
+    .book-tab:nth-child(1) { top: 10%; right: -68px; --tr: -2.5deg; }
+    .book-tab:nth-child(2) { top: 30%; right: -73px; --tr: 1.5deg; }
+    .book-tab:nth-child(3) { top: 55%; right: -78px; --tr: -1.5deg; }
+    .book-tab:nth-child(4) { top: 80%; right: -83px; --tr: 2deg; }
+    .book-tab:hover { transform: rotate(var(--tr, 0deg)) translateX(6px); opacity: 1; filter: brightness(1.05); }
+    .book-tab.is-current { z-index: 10; opacity: 1; transform: rotate(0deg) translateX(10px); box-shadow: inset 3px 0 4px rgba(120, 70, 90, .12), 3px 5px 14px rgba(150, 95, 120, .42); filter: brightness(1.06); }
+    .tab-pg { position: absolute; right: 7px; bottom: 3px; font-size: .62rem; opacity: .55; }
 
     /* ---------- 爱好清单（memo 虚线框） ---------- */
     .memo {
@@ -245,7 +251,7 @@
     /* ---------- 手机端（<768px）：书本降级为竖排平铺 ---------- */
     @media (max-width: 767px) {
       body { padding: 84px 12px 44px; }
-      .book-wrap { max-width: 560px; }
+      .book-wrap { width: 100%; max-width: 560px; }
       .book { height: auto; background: transparent; border-radius: 0; box-shadow: none; }
       .book::before, .book::after, .book__spine, .book-nav, .page-num, .desktop-deco, .book-tabs { display: none; }
       .spread {
@@ -376,31 +382,33 @@
         <span class="sticker" style="left: 82%; top: 55%; font-size: 1.1rem; transform: rotate(-6deg);">💫</span>
         <div class="page">
           <span class="chapter-tag">第二章 · 爱好</span>
-          <figure class="polaroid" data-photo="ai1" style="width: 245px; margin: 28px auto 0;">
-            <span class="tape tape--blue"></span>
-          </figure>
+          <div class="empty-frame" style="width: 86%; margin-top: 34px;">
+            <span class="tape tape--blue tape--s" style="top: -12px; left: 22px; transform: rotate(-8deg);"></span>
+            待拍摄
+          </div>
         </div>
         <div class="page">
-          <figure class="polaroid" data-photo="ai2" style="width: 200px; margin: 148px 0 0 auto;">
-            <span class="tape tape--purple"></span>
-          </figure>
+          <div class="empty-frame" style="width: 68%; margin: 128px 0 0 auto;">
+            <span class="tape tape--purple tape--s" style="top: -12px; right: 22px; transform: rotate(7deg);"></span>
+            待拍摄
+          </div>
           <p class="hand" style="margin-top: 18px; text-align: right; font-size: 1rem;">
-            代码和游戏，<br />都是我的世界 ✿
+            代码和游戏，<br />都是我的世界 ✿<br />
+            <span style="font-size: .88rem; color: #c09aa6;">（照片在路上了）</span>
           </p>
         </div>
       </section>
 
-      <!-- ============ 第 5 页 · 爱好其二：左页两张收藏照 / 右页虚线备忘清单 ============ -->
+      <!-- ============ 第 5 页 · 爱好其二：左页空相框待贴 / 右页虚线备忘清单 ============ -->
       <section class="spread" aria-label="爱好 · 其二">
         <div class="page">
-          <figure class="polaroid" data-photo="ai3" style="width: 195px; margin: 28px 0 0 4px;">
-            <span class="tape tape--pink"></span>
-          </figure>
-          <figure class="polaroid" data-photo="ai4" style="width: 195px; margin: -38px 0 0 112px;">
-            <span class="tape tape--mint"></span>
-          </figure>
-          <span style="position: absolute; top: 22px; right: 36px; font-size: .88rem; color: #c09aa6;">我的宝贝们</span>
-          <svg class="arrow" style="top: 54px; right: 32px; width: 86px; height: 58px; transform: rotate(-6deg);" viewBox="0 0 96 64" aria-hidden="true">
+          <div class="empty-frame" style="width: 82%; margin-top: 56px;">
+            <span class="tape tape--pink tape--s" style="top: -12px; left: 22px; transform: rotate(-9deg);"></span>
+            <span class="tape tape--mint tape--s" style="top: -12px; right: 22px; transform: rotate(8deg);"></span>
+            待拍摄
+          </div>
+          <span style="position: absolute; top: 22px; right: 36px; font-size: .88rem; color: #c09aa6;">宝贝们的位置</span>
+          <svg class="arrow" style="top: 56px; right: 40px; width: 86px; height: 58px; transform: rotate(-6deg);" viewBox="0 0 96 64" aria-hidden="true">
             <path d="M88,10 C62,20 44,32 22,50 M22,50 l1,-14 M22,50 l14,-3" fill="none" stroke="#e86a92" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </div>
@@ -444,15 +452,14 @@
 
       <div class="book__spine" aria-hidden="true"></div>
       <p class="page-num" id="pageNum">第 1 / 6 页</p>
+      <!-- 书缘索引标签：根部被书页厚度线压住，像真夹在书页里（移动端随书壳隐藏） -->
+      <nav class="book-tabs" aria-label="章节标签">
+        <button class="book-tab" type="button" data-goto="0" style="--tab: #f7dc7a;">目录<span class="tab-pg">P1</span></button>
+        <button class="book-tab" type="button" data-goto="1" style="--tab: #f6a6c8;">女装<span class="tab-pg">P2</span></button>
+        <button class="book-tab" type="button" data-goto="3" style="--tab: #a8dcc3;">爱好<span class="tab-pg">P4</span></button>
+        <button class="book-tab" type="button" data-goto="5" style="--tab: #d3bcf2;">恋爱<span class="tab-pg">P6</span></button>
+      </nav>
     </div>
-
-    <!-- 书缘索引标签：夹在书页里的章节小标签（移动端随书本外壳一起隐藏） -->
-    <nav class="book-tabs" aria-label="章节标签">
-      <button class="book-tab" type="button" data-goto="0" style="--tab: #f7dc7a;">目录</button>
-      <button class="book-tab" type="button" data-goto="1" style="--tab: #f6a6c8;">女装</button>
-      <button class="book-tab" type="button" data-goto="3" style="--tab: #a8dcc3;">爱好</button>
-      <button class="book-tab" type="button" data-goto="5" style="--tab: #d3bcf2;">恋爱</button>
-    </nav>
 
     <div class="book-nav">
       <button class="nav-btn" id="prevBtn" type="button">← 上一页</button>
@@ -481,11 +488,7 @@
         { id: 'nv1', chapter: '女装', src: 'photo/web/p002.jpg', caption: '女仆装', date: '2026.07.22' },
         { id: 'nv2', chapter: '女装', src: 'photo/web/p001.jpg', caption: '穿JK的游戏高手', date: '2026.07.22' },
         { id: 'nv3', chapter: '女装', src: 'photo/web/p003.jpg', caption: '怀念的14岁', date: '2026.07.22' },
-        { id: 'nv4', chapter: '女装', src: 'photo/web/p004.jpg', caption: '太阳下的瞬间', date: '2026.07.22' },
-        { id: 'ai1', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai1/640/540', caption: '折腾代码的下午', date: '2026.04.11' },
-        { id: 'ai2', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai2/560/660', caption: '游戏时间', date: '2026.05.03' },
-        { id: 'ai3', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai3/560/620', caption: '软乎乎收藏', date: '2026.06.25' },
-        { id: 'ai4', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai4/560/620', caption: '新到的毛绒', date: '2026.07.10' }
+        { id: 'nv4', chapter: '女装', src: 'photo/web/p004.jpg', caption: '太阳下的瞬间', date: '2026.07.22' }
       ];
       var byId = {};
       PHOTOS.forEach(function (p) { byId[p.id] = p; });
