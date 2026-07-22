@@ -3,51 +3,583 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>相册 ✿ 小圣的小窝</title>
-  <meta name="description" content="小圣的拍立得手帐相册，把喜欢的瞬间贴进来。" />
+  <title>小圣的手帐 ✿ 小圣的小窝</title>
+  <meta name="description" content="小圣的摊开的手帐书：目录、女装、爱好、恋爱，一页一页贴满喜欢的瞬间。" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,700;0,800;1,400&family=Zhi+Mang+Xing&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="assets/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       小圣的手帐书（photos.html · 单文件实现）
+       摊开的书 + 目录/女装/爱好/恋爱 + 每页单独手写排版
+       ============================================================ */
+    :root {
+      --pink: #ec6f9c;
+      --pink-deep: #d94f82;
+      --ink: #6f5560;
+      --paper-line: #e9d8b6;
+      --paper-line2: #f8eeda;
+      --ease: cubic-bezier(.22, .61, .36, 1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      font-family: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background-color: #fdeef4;
+      background-image:
+        linear-gradient(rgba(238, 152, 188, .15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(238, 152, 188, .15) 1px, transparent 1px);
+      background-size: 26px 26px;
+      padding: 88px 18px 64px;
+    }
+    img { user-select: none; }
+
+    /* ---------- 回小窝 ---------- */
+    .back-home {
+      position: fixed; top: 20px; left: 22px; z-index: 40;
+      padding: 9px 18px; background: #fff; color: var(--pink-deep);
+      border-radius: 999px; text-decoration: none; font-size: .98rem;
+      box-shadow: 0 3px 12px rgba(210, 110, 150, .25);
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+    .back-home:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(210, 110, 150, .34); }
+
+    /* ---------- 书本外壳（拟物重点） ---------- */
+    .book-wrap { max-width: 1060px; margin: 0 auto; position: relative; }
+    .book {
+      position: relative;
+      height: clamp(630px, 78vh, 740px);
+      background: linear-gradient(180deg, #fffaf0 0%, #fff6e4 100%);
+      border-radius: 22px;
+      box-shadow: 0 24px 55px rgba(178, 110, 140, .28);
+    }
+    /* 右侧书页厚度：一叠纸的细边 */
+    .book::before {
+      content: ''; position: absolute; top: 9px; bottom: 9px; right: -10px; width: 10px;
+      border-radius: 0 6px 6px 0;
+      background: repeating-linear-gradient(180deg, var(--paper-line2) 0 2px, var(--paper-line) 2px 4px);
+      box-shadow: 2px 3px 6px rgba(150, 105, 90, .18);
+    }
+    /* 底部书页厚度 */
+    .book::after {
+      content: ''; position: absolute; left: 9px; right: 9px; bottom: -10px; height: 10px;
+      border-radius: 0 0 6px 6px;
+      background: repeating-linear-gradient(90deg, var(--paper-line2) 0 2px, var(--paper-line) 2px 4px);
+      box-shadow: 3px 4px 8px rgba(150, 105, 90, .16);
+    }
+    /* 书脊凹陷阴影 */
+    .book__spine {
+      position: absolute; top: 0; bottom: 0; left: 50%; width: 64px; transform: translateX(-50%);
+      z-index: 6; pointer-events: none;
+      background: linear-gradient(90deg,
+        rgba(150, 110, 80, 0) 0%, rgba(150, 110, 80, .09) 28%,
+        rgba(105, 75, 55, .24) 50%,
+        rgba(150, 110, 80, .09) 72%, rgba(150, 110, 80, 0) 100%);
+    }
+    .book__spine::after {
+      content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%);
+      background: linear-gradient(180deg, rgba(105, 75, 55, .16), rgba(105, 75, 55, .05));
+    }
+    .page-num {
+      position: absolute; right: 24px; bottom: 12px; z-index: 7;
+      font-size: .85rem; color: #b38f7a; letter-spacing: .05em; pointer-events: none;
+    }
+
+    /* ---------- 跨页（每页单独手写，布局各不相同） ---------- */
+    .spread {
+      position: absolute; inset: 0; z-index: 1;
+      display: flex; border-radius: 22px; overflow: hidden;
+      opacity: 0; pointer-events: none;
+      transition: opacity .4s ease, transform .4s ease;
+    }
+    .spread.is-active { z-index: 2; opacity: 1; pointer-events: auto; }
+    .page { position: relative; width: 50%; height: 100%; padding: 40px 38px; }
+
+    /* ---------- 翻页按钮 ---------- */
+    .book-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; padding: 0 6px; }
+    .nav-btn {
+      font-family: inherit; font-size: 1.02rem; color: #fff;
+      background: linear-gradient(135deg, #f48fb1, var(--pink));
+      border: none; border-radius: 999px; padding: 11px 26px; cursor: pointer;
+      box-shadow: 0 6px 16px rgba(236, 111, 156, .35);
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease), opacity .25s;
+    }
+    .nav-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 22px rgba(236, 111, 156, .45); }
+    .nav-btn:disabled { opacity: .38; cursor: default; box-shadow: none; }
+
+    /* ---------- 装饰素材库：和纸胶带 ---------- */
+    .tape {
+      position: absolute; width: 96px; height: 27px; z-index: 4; border-radius: 2px;
+      box-shadow: 0 1px 3px rgba(120, 80, 90, .14); opacity: .9;
+      background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, .4) 0 7px, rgba(255, 255, 255, .12) 7px 14px);
+    }
+    .tape--pink   { background-color: rgba(246, 166, 200, .78); }
+    .tape--mint   { background-color: rgba(158, 219, 194, .78); }
+    .tape--blue   { background-color: rgba(158, 196, 240, .78); }
+    .tape--yellow { background-color: rgba(250, 222, 146, .82); }
+    .tape--purple { background-color: rgba(203, 176, 240, .78); }
+    .tape--s { width: 64px; height: 22px; }
+
+    /* ---------- 装饰素材库：贴纸 / 印章 / 箭头 / 虚线 ---------- */
+    .sticker { position: absolute; z-index: 3; line-height: 1; user-select: none; filter: drop-shadow(0 2px 2px rgba(150, 90, 110, .18)); }
+    .stamp {
+      position: absolute; z-index: 3; width: 88px; height: 88px; border-radius: 50%;
+      border: 2.5px solid rgba(224, 102, 142, .55); display: grid; place-items: center;
+      color: rgba(224, 102, 142, .8); font-size: .78rem; line-height: 1.35; text-align: center;
+      transform: rotate(-12deg); opacity: .85;
+    }
+    .stamp::after { content: ''; position: absolute; inset: 5px; border-radius: 50%; border: 1.5px dashed rgba(224, 102, 142, .45); }
+    .arrow { position: absolute; z-index: 3; overflow: visible; }
+    .divider { display: block; width: 70%; margin: 18px auto 0; border-top: 2.5px dashed rgba(236, 143, 178, .55); }
+
+    /* ---------- 拍立得照片 ---------- */
+    .polaroid {
+      position: relative; z-index: 2; background: #fff; padding: 11px 11px 46px;
+      border-radius: 3px; box-shadow: 0 8px 20px rgba(150, 95, 120, .22);
+      transform: rotate(var(--r, 0deg)); cursor: zoom-in;
+      transition: transform .35s var(--ease), box-shadow .35s var(--ease);
+    }
+    .polaroid:hover { transform: rotate(0deg) scale(1.05); z-index: 9; box-shadow: 0 16px 34px rgba(150, 95, 120, .34); }
+    .polaroid img { display: block; width: 100%; height: auto; background: #fbe9f1; }
+    .polaroid figcaption {
+      position: absolute; left: 0; right: 0; bottom: 9px; padding: 0 13px;
+      display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+      font-size: .95rem; color: #96737f;
+    }
+    .polaroid figcaption .cap { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .polaroid figcaption .date { font-size: .78rem; color: #c1a0ab; flex-shrink: 0; }
+    .polaroid .tape { top: -13px; left: 50%; transform: translateX(-50%) rotate(-4deg); }
+
+    /* ---------- 手写文字 / 章节标签 ---------- */
+    .hand { line-height: 2.0; font-size: 1.06rem; color: #7c5f6a; }
+    .chapter-tag {
+      display: inline-block; padding: 6px 16px; border-radius: 999px;
+      background: #fff; color: var(--pink-deep); font-size: .92rem;
+      box-shadow: 0 3px 10px rgba(210, 110, 150, .2);
+    }
+
+    /* ---------- 目录页 ---------- */
+    .book-title { font-size: clamp(2.1rem, 4.6vw, 3rem); font-weight: 400; color: #5f4450; letter-spacing: .04em; }
+    .title-underline { display: block; width: 78%; margin: 10px 0 18px; }
+    .toc-tab {
+      display: block; width: 86%; margin: 20px auto; padding: 14px 20px 12px;
+      background: #fff; border: none; border-radius: 14px; cursor: pointer;
+      font-family: inherit; font-size: 1.28rem; color: #6b4f5a; text-align: left;
+      box-shadow: 0 5px 14px rgba(150, 95, 120, .18);
+      transform: rotate(var(--r, 0deg)); position: relative;
+      transition: transform .28s var(--ease), box-shadow .28s var(--ease);
+    }
+    .toc-tab::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 6px; border-radius: 3px; background: var(--tab, #f6a6c8); }
+    .toc-tab:hover { transform: rotate(0) translateY(-3px) scale(1.03); box-shadow: 0 12px 26px rgba(150, 95, 120, .28); }
+    .toc-tab small { display: block; font-size: .8rem; color: #b18f9b; margin-top: 2px; }
+    .toc-tab .tape { top: -11px; right: 22px; left: auto; transform: rotate(6deg); }
+
+    /* ---------- 爱好清单（memo 虚线框） ---------- */
+    .memo {
+      position: relative; padding: 22px 24px;
+      border: 2.5px dashed rgba(150, 180, 220, .6); border-radius: 16px;
+      background: rgba(255, 255, 255, .5);
+    }
+    .memo h3 { font-weight: 400; color: #5f7089; font-size: 1.15rem; margin-bottom: 8px; }
+    .memo ul { list-style: none; }
+    .memo li { padding: 5px 0; font-size: 1.04rem; color: #6f5a70; }
+
+    /* ---------- 恋爱章：待拍摄空相框 ---------- */
+    .empty-frame {
+      position: relative; width: 84%; margin: 36px auto 0; aspect-ratio: 4/3;
+      border: 3px dashed rgba(224, 102, 142, .5); border-radius: 16px;
+      background: rgba(255, 255, 255, .4);
+      display: grid; place-items: center;
+      color: #cfa7b2; font-size: 1.35rem; letter-spacing: .2em;
+    }
+
+    /* ---------- 手绘波浪"小河流" ---------- */
+    .river { position: absolute; left: 0; right: 0; top: 46%; height: 120px; z-index: 1; pointer-events: none; }
+
+    /* ---------- Lightbox ---------- */
+    .lightbox {
+      position: fixed; inset: 0; z-index: 60; display: grid; place-items: center;
+      background: rgba(84, 45, 62, .55);
+      backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+      opacity: 0; pointer-events: none; transition: opacity .3s ease;
+    }
+    .lightbox.is-open { opacity: 1; pointer-events: auto; }
+    .lightbox figure { max-width: min(90vw, 860px); margin: 0; }
+    .lightbox img {
+      display: block; max-width: 100%; max-height: 76vh;
+      border: 12px solid #fff; border-radius: 6px;
+      box-shadow: 0 24px 60px rgba(40, 15, 30, .45);
+    }
+    .lightbox figcaption { text-align: center; margin-top: 14px; color: #ffe1ee; font-size: 1.06rem; }
+    .lightbox__close {
+      position: absolute; top: 16px; right: 22px; width: 44px; height: 44px; border-radius: 50%;
+      border: none; background: rgba(255, 255, 255, .92); color: #c05a80; font-size: 1.5rem; cursor: pointer;
+      box-shadow: 0 4px 14px rgba(40, 15, 30, .3);
+      transition: transform .25s var(--ease);
+    }
+    .lightbox__close:hover { transform: rotate(90deg); }
+
+    /* ---------- 手机端（<768px）：书本降级为竖排平铺 ---------- */
+    @media (max-width: 767px) {
+      body { padding: 84px 12px 44px; }
+      .book-wrap { max-width: 560px; }
+      .book { height: auto; background: transparent; border-radius: 0; box-shadow: none; }
+      .book::before, .book::after, .book__spine, .book-nav, .page-num, .desktop-deco { display: none; }
+      .spread {
+        position: relative; inset: auto; display: block; border-radius: 0; overflow: visible;
+        opacity: 1 !important; transform: none !important; pointer-events: auto; transition: none;
+      }
+      .spread + .spread { margin-top: 40px; padding-top: 46px; border-top: 2.5px dashed rgba(236, 143, 178, .55); }
+      .spread + .spread::before {
+        content: '✿'; position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+        background: #fdeef4; padding: 0 12px; color: #ec8fb4; font-size: 1.1rem; z-index: 5;
+      }
+      .page { width: 100%; height: auto; padding: 6px 4px 28px; }
+      .river { position: static; height: 70px; margin: 8px 0; }
+      .lightbox img { max-height: 70vh; }
+    }
+
+    /* ---------- 减少动态偏好 ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      .spread, .nav-btn, .polaroid, .toc-tab, .back-home, .lightbox, .lightbox__close { transition: none !important; }
+      .polaroid:hover { transform: rotate(var(--r, 0deg)); }
+    }
+  </style>
 </head>
-<body class="photos-page">
-  <!-- 页面过渡纱幕：进入时粉白淡出；回首页同样粉白 -->
-  <div class="page-veil page-veil--day page-veil--enter" aria-hidden="true"></div>
+<body>
+  <a class="back-home" href="index.html" title="回到小窝">❮ 回小窝</a>
 
-  <!-- 手帐背景：方格纸 + 手绘风小贴纸（纯装饰） -->
-  <div class="scrap-bg" aria-hidden="true">
-    <span class="scrap-sticker scrap-sticker--1">🌸</span>
-    <span class="scrap-sticker scrap-sticker--2">⭐</span>
-    <span class="scrap-sticker scrap-sticker--3">💗</span>
-    <span class="scrap-sticker scrap-sticker--4">🌸</span>
-    <span class="scrap-sticker scrap-sticker--5">✨</span>
-    <span class="scrap-sticker scrap-sticker--6">💮</span>
+  <div class="book-wrap">
+    <div class="book" id="book">
+
+      <!-- ============ 第 1 页 · 目录：左页书名题词 / 右页三个章节贴纸 ============ -->
+      <section class="spread" aria-label="目录">
+        <div class="page">
+          <span class="tape tape--pink" style="top: 26px; left: 34px; transform: rotate(-8deg);"></span>
+          <div style="margin-top: 84px;">
+            <h1 class="book-title">小圣的手帐 <span style="color: #ec6f9c;">✿</span></h1>
+            <svg class="title-underline" viewBox="0 0 300 18" aria-hidden="true">
+              <path d="M4,10 C60,2 120,16 170,9 S 270,4 296,10" fill="none" stroke="#f092b4" stroke-width="4" stroke-linecap="round" opacity=".7" />
+            </svg>
+            <p class="hand">把喜欢的瞬间，<br />一点一点贴进这本小书里。<br />字丑别笑，心意是满的。</p>
+          </div>
+          <span class="sticker" style="top: 58px; right: 46px; font-size: 1.7rem; transform: rotate(12deg);">🌸</span>
+          <span class="sticker" style="bottom: 128px; left: 40px; font-size: 1.4rem; transform: rotate(-10deg);">🎀</span>
+          <span class="sticker" style="bottom: 62px; right: 62px; font-size: 1.5rem;">⭐</span>
+          <div class="stamp" style="bottom: 44px; left: 54%;">2026<br />开册大吉</div>
+        </div>
+        <div class="page">
+          <h2 style="font-weight: 400; color: #8a6a76; font-size: 1.3rem; letter-spacing: .4em; text-align: center; margin-top: 16px;">目 录</h2>
+          <button class="toc-tab" type="button" data-goto="1" style="--r: -1.6deg; --tab: #f6a6c8;">
+            <span class="tape tape--pink tape--s"></span>
+            女装<small>裙子、蝴蝶结，和一点点勇气</small>
+          </button>
+          <button class="toc-tab" type="button" data-goto="3" style="--r: 1.8deg; --tab: #9edbc2;">
+            <span class="tape tape--mint tape--s"></span>
+            爱好<small>代码、游戏，和软乎乎的东西</small>
+          </button>
+          <button class="toc-tab" type="button" data-goto="5" style="--r: -2deg; --tab: #cbb0f0;">
+            <span class="tape tape--purple tape--s"></span>
+            恋爱<small>还在等待的一页</small>
+          </button>
+          <span class="desktop-deco" style="position: absolute; bottom: 100px; left: 36px; font-size: .85rem; color: #c09aa6; transform: rotate(-6deg);">点贴纸直接跳！</span>
+          <svg class="arrow desktop-deco" style="bottom: 38px; left: 30px; width: 96px; height: 64px;" viewBox="0 0 96 64" aria-hidden="true">
+            <path d="M8,8 C30,44 55,52 84,40 M84,40 l-13,-4 M84,40 l-5,13" fill="none" stroke="#e86a92" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+      </section>
+
+      <!-- ============ 第 2 页 · 女装其一：左页竖版拍立得 / 右页整页手写文字 ============ -->
+      <section class="spread" aria-label="女装 · 其一">
+        <div class="page">
+          <span class="chapter-tag">第一章 · 女装</span>
+          <figure class="polaroid" data-photo="nv1" style="width: 235px; margin: 32px auto 0;">
+            <span class="tape tape--pink"></span>
+          </figure>
+          <span class="sticker" style="bottom: 44px; left: 36px; font-size: 1.6rem; transform: rotate(-12deg);">🎀</span>
+          <span class="sticker" style="top: 118px; right: 30px; font-size: 1.3rem;">💗</span>
+        </div>
+        <div class="page">
+          <span class="tape tape--yellow" style="top: 24px; right: 40px; transform: rotate(6deg);"></span>
+          <h3 style="font-weight: 400; font-size: 1.35rem; color: #6b4f5a; margin-top: 28px;">第一次穿上裙子那天</h3>
+          <svg viewBox="0 0 200 12" style="width: 150px; margin: 8px 0 14px;" aria-hidden="true">
+            <path d="M3,7 C40,2 80,11 120,6 S 180,4 197,7" fill="none" stroke="#f092b4" stroke-width="3" stroke-linecap="round" opacity=".7" />
+          </svg>
+          <p class="hand">
+            对着镜子转了三圈，<br />
+            裙摆晃起来的样子，<br />
+            比想象中还要可爱一点。<br /><br />
+            身体是男孩子又怎样，<br />
+            心里的小姑娘今天很开心。<br />
+            慢慢来，不着急 ✿
+          </p>
+          <span class="sticker" style="bottom: 52px; right: 44px; font-size: 1.5rem; transform: rotate(10deg);">🌸</span>
+          <div class="stamp" style="bottom: 34px; left: 38px; width: 76px; height: 76px;">05.20<br />纪念日</div>
+        </div>
+      </section>
+
+      <!-- ============ 第 3 页 · 女装其二：左页两张照片斜叠 + 箭头涂鸦 / 右页照片 + 短记 ============ -->
+      <section class="spread" aria-label="女装 · 其二">
+        <div class="page">
+          <div style="margin-top: 28px;">
+            <figure class="polaroid" data-photo="nv2" style="width: 190px; margin-left: 6px;">
+              <span class="tape tape--blue"></span>
+            </figure>
+            <figure class="polaroid" data-photo="nv3" style="width: 190px; margin: -58px 0 0 118px;">
+              <span class="tape tape--yellow"></span>
+            </figure>
+          </div>
+          <span style="position: absolute; top: 24px; right: 30px; font-size: .88rem; color: #c09aa6; transform: rotate(5deg);">蝴蝶结是本体！</span>
+          <svg class="arrow" style="top: 62px; right: 28px; width: 90px; height: 60px; transform: rotate(8deg);" viewBox="0 0 96 64" aria-hidden="true">
+            <path d="M88,8 C60,14 40,26 20,52 M20,52 l2,-14 M20,52 l14,-4" fill="none" stroke="#e86a92" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          <span class="sticker" style="bottom: 34px; left: 44px; font-size: 1.4rem;">✨</span>
+        </div>
+        <div class="page">
+          <figure class="polaroid" data-photo="nv4" style="width: 220px; margin: 24px auto 0;">
+            <span class="tape tape--mint"></span>
+          </figure>
+          <p class="hand" style="margin: 24px 8px 0; font-size: 1rem;">
+            第一次穿出门，紧张得同手同脚，<br />
+            但风把裙摆吹起来的瞬间——值！
+          </p>
+          <span class="divider" style="width: 56%;"></span>
+          <span class="sticker" style="bottom: 40px; right: 40px; font-size: 1.5rem; transform: rotate(-8deg);">💮</span>
+        </div>
+      </section>
+
+      <!-- ============ 第 4 页 · 爱好其一：波浪"小河流"横跨两页，沿途星星 ============ -->
+      <section class="spread" aria-label="爱好 · 其一">
+        <svg class="river" viewBox="0 0 1000 120" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M-10,58 C110,18 210,102 330,60 S 550,18 670,60 S 890,102 1010,52" fill="none" stroke="#93c9ef" stroke-width="9" stroke-linecap="round" opacity=".5" />
+          <path d="M-10,62 C110,22 210,106 330,64 S 550,22 670,64 S 890,106 1010,56" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".65" />
+        </svg>
+        <span class="sticker" style="left: 16%; top: 43%; font-size: 1.3rem; transform: rotate(-10deg);">⭐</span>
+        <span class="sticker" style="left: 38%; top: 56%; font-size: 1.1rem;">✨</span>
+        <span class="sticker" style="left: 60%; top: 42%; font-size: 1.25rem; transform: rotate(14deg);">⭐</span>
+        <span class="sticker" style="left: 82%; top: 55%; font-size: 1.1rem; transform: rotate(-6deg);">💫</span>
+        <div class="page">
+          <span class="chapter-tag">第二章 · 爱好</span>
+          <figure class="polaroid" data-photo="ai1" style="width: 245px; margin: 28px auto 0;">
+            <span class="tape tape--blue"></span>
+          </figure>
+        </div>
+        <div class="page">
+          <figure class="polaroid" data-photo="ai2" style="width: 200px; margin: 148px 0 0 auto;">
+            <span class="tape tape--purple"></span>
+          </figure>
+          <p class="hand" style="margin-top: 18px; text-align: right; font-size: 1rem;">
+            代码和游戏，<br />都是我的世界 ✿
+          </p>
+        </div>
+      </section>
+
+      <!-- ============ 第 5 页 · 爱好其二：左页两张收藏照 / 右页虚线备忘清单 ============ -->
+      <section class="spread" aria-label="爱好 · 其二">
+        <div class="page">
+          <figure class="polaroid" data-photo="ai3" style="width: 195px; margin: 28px 0 0 4px;">
+            <span class="tape tape--pink"></span>
+          </figure>
+          <figure class="polaroid" data-photo="ai4" style="width: 195px; margin: -38px 0 0 112px;">
+            <span class="tape tape--mint"></span>
+          </figure>
+          <span style="position: absolute; top: 22px; right: 36px; font-size: .88rem; color: #c09aa6;">我的宝贝们</span>
+          <svg class="arrow" style="top: 54px; right: 32px; width: 86px; height: 58px; transform: rotate(-6deg);" viewBox="0 0 96 64" aria-hidden="true">
+            <path d="M88,10 C62,20 44,32 22,50 M22,50 l1,-14 M22,50 l14,-3" fill="none" stroke="#e86a92" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </div>
+        <div class="page">
+          <div class="memo" style="margin-top: 36px;">
+            <span class="tape tape--yellow" style="top: -13px; left: 50%; transform: translateX(-50%) rotate(2deg);"></span>
+            <h3>小圣的爱好清单</h3>
+            <ul>
+              <li>① 写点没用的好玩代码 💻</li>
+              <li>② 种田、冒险、看风景 🎮</li>
+              <li>③ 收集毛绒和粉色 🧸</li>
+              <li>④ 窝在被子里睡大觉 🛏️</li>
+            </ul>
+          </div>
+          <p class="hand" style="margin: 22px 10px 0; font-size: .98rem;">爱好不用多厉害，<br />能治愈自己就够啦。</p>
+          <span class="sticker" style="bottom: 36px; right: 36px; font-size: 1.4rem; transform: rotate(8deg);">💗</span>
+        </div>
+      </section>
+
+      <!-- ============ 第 6 页 · 恋爱：留白等待，虚线空相框 ============ -->
+      <section class="spread" aria-label="恋爱 · 留白">
+        <div class="page">
+          <span class="chapter-tag">第三章 · 恋爱</span>
+          <p class="hand" style="margin-top: 46px; color: #b48f9b;">这一章，<br />先干干净净地空着。</p>
+          <svg viewBox="0 0 60 54" style="width: 44px; margin-top: 28px; margin-left: 8px; transform: rotate(-8deg);" aria-hidden="true">
+            <path d="M30,48 C10,32 4,20 10,12 C15,5 26,8 30,16 C34,8 45,5 50,12 C56,20 50,32 30,48 Z" fill="none" stroke="#f0a5c0" stroke-width="3" stroke-linejoin="round" />
+          </svg>
+          <span class="sticker" style="bottom: 62px; left: 48px; font-size: 1.3rem; opacity: .8;">💌</span>
+        </div>
+        <div class="page">
+          <div class="empty-frame">
+            <span class="tape tape--pink tape--s" style="top: -12px; left: 20px; transform: rotate(-10deg);"></span>
+            <span class="tape tape--purple tape--s" style="top: -12px; right: 20px; transform: rotate(8deg);"></span>
+            待拍摄
+          </div>
+          <p class="hand" style="margin-top: 26px; text-align: center; color: #a57e8b;">这里在等一个人，<br />一起把它贴满 ✿</p>
+          <span class="sticker" style="top: 40px; right: 34px; font-size: 1.25rem; transform: rotate(10deg);">🌸</span>
+          <span class="sticker" style="bottom: 44px; left: 30px; font-size: 1.15rem;">⭐</span>
+        </div>
+      </section>
+
+      <div class="book__spine" aria-hidden="true"></div>
+      <p class="page-num" id="pageNum">第 1 / 6 页</p>
+    </div>
+
+    <div class="book-nav">
+      <button class="nav-btn" id="prevBtn" type="button">← 上一页</button>
+      <button class="nav-btn" id="nextBtn" type="button">下一页 →</button>
+    </div>
   </div>
 
-  <header class="scrap-head">
-    <a class="scrap-home" href="index.html" title="回到小窝">❮ 回小窝</a>
-    <h1 class="scrap-title">小圣的相册</h1>
-    <p class="scrap-sub">把喜欢的瞬间，贴进手帐里 ✿</p>
-  </header>
-
-  <!-- 拍立得瀑布流（album.js 读 photo/photos.json 渲染） -->
-  <main class="scrap-wall" id="scrapWall" aria-label="相册照片墙"></main>
-
-  <!-- Lightbox：点照片看大图 -->
-  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="查看大图" aria-hidden="true">
+  <!-- Lightbox：点照片看大图，点空白 / × / Esc 关闭 -->
+  <div class="lightbox" id="lightbox" aria-hidden="true">
     <button class="lightbox__close" id="lbClose" type="button" aria-label="关闭">×</button>
-    <button class="lightbox__nav lightbox__nav--prev" id="lbPrev" type="button" aria-label="上一张">‹</button>
-    <figure class="lightbox__stage">
-      <img class="lightbox__img" id="lbImg" src="" alt="相册大图" />
-      <figcaption class="lightbox__cap" id="lbCap"></figcaption>
+    <figure id="lbFigure">
+      <img id="lbImg" src="" alt="相册大图" />
+      <figcaption id="lbCap"></figcaption>
     </figure>
-    <button class="lightbox__nav lightbox__nav--next" id="lbNext" type="button" aria-label="下一张">›</button>
   </div>
 
-  <script src="assets/js/main.js"></script>
-  <script src="assets/js/album.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      /* ================================================================
+         照片数据：把 src 换成你自己的图片路径就行（caption/date 顺手改）
+         id 对应上面 HTML 里 <figure data-photo="..."> 的占位框
+         ================================================================ */
+      var PHOTOS = [
+        { id: 'nv1', chapter: '女装', src: 'https://picsum.photos/seed/sheng-nv1/600/780', caption: '第一套小裙子', date: '2026.05.20' },
+        { id: 'nv2', chapter: '女装', src: 'https://picsum.photos/seed/sheng-nv2/560/640', caption: '对镜自拍', date: '2026.06.01' },
+        { id: 'nv3', chapter: '女装', src: 'https://picsum.photos/seed/sheng-nv3/560/640', caption: '蝴蝶结是本体', date: '2026.06.18' },
+        { id: 'nv4', chapter: '女装', src: 'https://picsum.photos/seed/sheng-nv4/600/620', caption: '出门逛街！', date: '2026.07.02' },
+        { id: 'ai1', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai1/640/540', caption: '折腾代码的下午', date: '2026.04.11' },
+        { id: 'ai2', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai2/560/660', caption: '游戏时间', date: '2026.05.03' },
+        { id: 'ai3', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai3/560/620', caption: '软乎乎收藏', date: '2026.06.25' },
+        { id: 'ai4', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai4/560/620', caption: '新到的毛绒', date: '2026.07.10' }
+      ];
+      var byId = {};
+      PHOTOS.forEach(function (p) { byId[p.id] = p; });
+
+      /* picsum 链接末尾是 /宽/高，放大一倍当 lightbox 大图；换自己的图后此方法原样返回 */
+      function big(src) {
+        return src.replace(/\/(\d+)\/(\d+)$/, function (m, w, h) { return '/' + w * 2 + '/' + h * 2; });
+      }
+
+      /* ---------- 把 data-photo 占位框填成拍立得（随机倾斜 -3°~3°） ---------- */
+      document.querySelectorAll('[data-photo]').forEach(function (fig) {
+        var p = byId[fig.getAttribute('data-photo')];
+        if (!p) return;
+        fig.style.setProperty('--r', (Math.random() * 6 - 3).toFixed(1) + 'deg');
+        var img = document.createElement('img');
+        img.src = p.src;
+        img.alt = p.caption || '照片';
+        img.loading = 'lazy';
+        var cap = document.createElement('figcaption');
+        var capTxt = document.createElement('span');
+        capTxt.className = 'cap';
+        capTxt.textContent = p.caption || '✿';
+        var dateTxt = document.createElement('span');
+        dateTxt.className = 'date';
+        dateTxt.textContent = p.date || '';
+        cap.appendChild(capTxt);
+        cap.appendChild(dateTxt);
+        fig.appendChild(img);
+        fig.appendChild(cap);
+        fig.addEventListener('click', function () { openLb(p); });
+      });
+
+      /* ---------- Lightbox ---------- */
+      var lb = document.getElementById('lightbox');
+      var lbImg = document.getElementById('lbImg');
+      var lbCap = document.getElementById('lbCap');
+      function openLb(p) {
+        lbImg.src = big(p.src);
+        lbImg.alt = p.caption || '照片';
+        lbCap.textContent = (p.caption || '✿') + (p.date ? ' · ' + p.date : '');
+        lb.classList.add('is-open');
+        lb.setAttribute('aria-hidden', 'false');
+      }
+      function closeLb() {
+        lb.classList.remove('is-open');
+        lb.setAttribute('aria-hidden', 'true');
+      }
+      lb.addEventListener('click', closeLb);                              // 点空白处关闭
+      document.getElementById('lbFigure').addEventListener('click', function (e) { e.stopPropagation(); });
+      document.getElementById('lbClose').addEventListener('click', closeLb);
+
+      /* ---------- 翻页（0.4s 滑出淡出 + 滑入淡入） ---------- */
+      var spreads = Array.prototype.slice.call(document.querySelectorAll('.spread'));
+      var pageNum = document.getElementById('pageNum');
+      var prevBtn = document.getElementById('prevBtn');
+      var nextBtn = document.getElementById('nextBtn');
+      var cur = 0, animating = false;
+
+      function update() {
+        pageNum.textContent = '第 ' + (cur + 1) + ' / ' + spreads.length + ' 页';
+        prevBtn.disabled = cur === 0;
+        nextBtn.disabled = cur === spreads.length - 1;
+      }
+
+      function go(i, dir) {
+        if (animating || i === cur || i < 0 || i >= spreads.length) return;
+        animating = true;
+        var old = spreads[cur], nu = spreads[i];
+        var outX = dir > 0 ? '-46px' : '46px';
+        var inX = dir > 0 ? '46px' : '-46px';
+        nu.style.transition = 'none';
+        nu.style.opacity = '0';
+        nu.style.transform = 'translateX(' + inX + ')';
+        nu.classList.add('is-active');
+        void nu.offsetWidth;                       // 强制重排，让起始位置生效
+        nu.style.transition = '';
+        nu.style.opacity = '';
+        nu.style.transform = '';
+        old.style.transform = 'translateX(' + outX + ')';
+        old.style.opacity = '0';
+        cur = i;
+        update();
+        setTimeout(function () {
+          old.classList.remove('is-active');
+          old.style.transform = '';
+          old.style.opacity = '';
+          animating = false;
+        }, 420);
+      }
+
+      prevBtn.addEventListener('click', function () { go(cur - 1, -1); });
+      nextBtn.addEventListener('click', function () { go(cur + 1, 1); });
+      document.querySelectorAll('[data-goto]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          var i = parseInt(el.getAttribute('data-goto'), 10);
+          go(i, i > cur ? 1 : -1);
+        });
+      });
+      document.addEventListener('keydown', function (e) {
+        if (lb.classList.contains('is-open')) {
+          if (e.key === 'Escape') closeLb();
+          return;
+        }
+        if (e.key === 'ArrowLeft') go(cur - 1, -1);
+        else if (e.key === 'ArrowRight') go(cur + 1, 1);
+      });
+
+      /* ---------- 起始页：?p=页码 可直接打开某一页 ---------- */
+      var m = /[?&]p=(\d+)/.exec(location.search);
+      var start = m ? Math.min(Math.max(parseInt(m[1], 10) - 1, 0), spreads.length - 1) : 0;
+      cur = start;
+      spreads[start].classList.add('is-active');
+      update();
+    })();
+  </script>
 </body>
 </html>

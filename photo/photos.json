@@ -1,23 +1,30 @@
 [
   {
     "file": "web/p001.jpg",
-    "caption": "",
+    "caption": "穿JK的游戏高手",
     "date": "2026.07.22",
     "w": 1600,
     "h": 1600
   },
   {
     "file": "web/p002.jpg",
-    "caption": "",
+    "caption": "女仆装",
     "date": "2026.07.22",
     "w": 1600,
     "h": 1140
   },
   {
     "file": "web/p003.jpg",
-    "caption": "",
+    "caption": "怀念的14岁",
     "date": "2026.07.22",
     "w": 1600,
     "h": 1200
+  },
+  {
+    "file": "web/p004.jpg",
+    "caption": "太阳下的瞬间",
+    "date": "2026.07.22",
+    "w": 1600,
+    "h": 1600
   }
 ]

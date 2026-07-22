@@ -5,8 +5,10 @@
 
 - 按修改时间排序，统一命名 p001.jpg / p002.jpg ...（重复跑结果一致）
 - 长边 >1600 缩到 1600，JPEG 质量 82；gif 原样拷贝保留动图
+- 中文文件名可以直接用，会自动作为默认 caption；手机照片按 EXIF 自动转正
 - caption 默认从文件名清洗（hash 名 / IMG_xxx 类无意义名 -> 空），可手改 photos.json
 - date 取文件修改时间；删掉的照片会同步从 web/ 和 json 移除
+- 单张照片读取失败只会跳过并提示原因，不影响其他照片
 """
 import io
 import json
@@ -17,7 +19,7 @@ import time
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, "photo")
@@ -40,6 +42,26 @@ def clean_caption(name):
     return stem
 
 
+def process_one(path, ext, out_path):
+    """处理单张照片，返回 (w, h)；失败抛异常由调用方跳过"""
+    if ext in COPY_EXTS:
+        with open(path, "rb") as fi, open(out_path, "wb") as fo:
+            fo.write(fi.read())
+        im = Image.open(out_path)
+        return im.size
+    im = Image.open(path)
+    im = ImageOps.exif_transpose(im)   # 按手机拍摄方向转正
+    im = im.convert("RGB")
+    w, h = im.size
+    edge = max(w, h)
+    if edge > MAX_EDGE:
+        s = MAX_EDGE / edge
+        im = im.resize((round(w * s), round(h * s)), Image.LANCZOS)
+        w, h = im.size
+    im.save(out_path, "JPEG", quality=QUALITY, optimize=True)
+    return w, h
+
+
 def main():
     if not os.path.isdir(SRC):
         print("photo/ 文件夹不存在")
@@ -55,6 +77,8 @@ def main():
         ext = os.path.splitext(f)[1].lower()
         if ext in IMG_EXTS or ext in COPY_EXTS:
             items.append((os.path.getmtime(p), f, p, ext))
+        elif f != "photos.json":
+            print("SKIP %s（不支持的格式，请先转成 JPG/PNG/WebP/GIF）" % f)
     items.sort()
 
     photos = []
@@ -65,21 +89,13 @@ def main():
         out_name = base + out_ext
         out_path = os.path.join(WEB, out_name)
 
-        if ext in COPY_EXTS:
-            with open(path, "rb") as fi, open(out_path, "wb") as fo:
-                fo.write(fi.read())
-            im = Image.open(out_path)
-            w, h = im.size
-        else:
-            im = Image.open(path)
-            im = im.convert("RGB")
-            w, h = im.size
-            edge = max(w, h)
-            if edge > MAX_EDGE:
-                s = MAX_EDGE / edge
-                im = im.resize((round(w * s), round(h * s)), Image.LANCZOS)
-                w, h = im.size
-            im.save(out_path, "JPEG", quality=QUALITY, optimize=True)
+        try:
+            w, h = process_one(path, ext, out_path)
+        except Exception as e:
+            print("SKIP %s（读取失败：%s）" % (fname, e))
+            if os.path.exists(out_path):
+                os.remove(out_path)
+            continue
 
         used.add(out_name)
         photos.append({
