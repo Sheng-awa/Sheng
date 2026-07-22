@@ -35,6 +35,7 @@
         linear-gradient(90deg, rgba(238, 152, 188, .15) 1px, transparent 1px);
       background-size: 26px 26px;
       padding: 88px 18px 64px;
+      overflow-x: hidden;   /* 窄窗口时书缘标签允许被裁掉一点，不许出横向滚动条 */
     }
     img { user-select: none; }
 
@@ -53,6 +54,7 @@
     .book {
       position: relative;
       height: clamp(630px, 78vh, 740px);
+      z-index: 1;   /* 压住书缘标签的根部，让标签看起来真的夹在书页里 */
       background: linear-gradient(180deg, #fffaf0 0%, #fff6e4 100%);
       border-radius: 22px;
       box-shadow: 0 24px 55px rgba(178, 110, 140, .28);
@@ -165,18 +167,35 @@
     /* ---------- 目录页 ---------- */
     .book-title { font-size: clamp(2.1rem, 4.6vw, 3rem); font-weight: 400; color: #5f4450; letter-spacing: .04em; }
     .title-underline { display: block; width: 78%; margin: 10px 0 18px; }
-    .toc-tab {
-      display: block; width: 86%; margin: 20px auto; padding: 14px 20px 12px;
-      background: #fff; border: none; border-radius: 14px; cursor: pointer;
-      font-family: inherit; font-size: 1.28rem; color: #6b4f5a; text-align: left;
-      box-shadow: 0 5px 14px rgba(150, 95, 120, .18);
-      transform: rotate(var(--r, 0deg)); position: relative;
-      transition: transform .28s var(--ease), box-shadow .28s var(--ease);
+    /* 手写目录行：章节名 ······ 页码 */
+    .toc-lines { list-style: none; margin-top: 30px; }
+    .toc-lines button {
+      display: flex; align-items: baseline; width: 100%; gap: 8px;
+      background: none; border: none; cursor: pointer; font-family: inherit;
+      font-size: 1.3rem; color: #6b4f5a; padding: 13px 6px; text-align: left;
+      transition: transform .25s var(--ease), color .25s;
     }
-    .toc-tab::before { content: ''; position: absolute; left: 0; top: 10px; bottom: 10px; width: 6px; border-radius: 3px; background: var(--tab, #f6a6c8); }
-    .toc-tab:hover { transform: rotate(0) translateY(-3px) scale(1.03); box-shadow: 0 12px 26px rgba(150, 95, 120, .28); }
-    .toc-tab small { display: block; font-size: .8rem; color: #b18f9b; margin-top: 2px; }
-    .toc-tab .tape { top: -11px; right: 22px; left: auto; transform: rotate(6deg); }
+    .toc-lines button:hover { transform: translateX(7px); color: var(--pink-deep); }
+    .toc-dots { flex: 1; border-bottom: 2px dotted rgba(190, 140, 160, .45); transform: translateY(-5px); }
+    .toc-pg { color: #b18f9b; font-size: 1rem; }
+
+    /* ---------- 书缘索引标签：夹在书页里的彩色小标签 ---------- */
+    .book-tabs { position: absolute; top: 0; bottom: 0; right: 0; width: 0; z-index: 0; }
+    .book-tab {
+      position: absolute; right: -26px; width: 78px; height: 44px;
+      border: none; border-radius: 3px 9px 9px 3px; cursor: pointer;
+      font-family: inherit; font-size: .95rem; color: #6b4f5a;
+      background: var(--tab, #f6a6c8); opacity: .9;
+      box-shadow: 2px 3px 8px rgba(150, 95, 120, .25);
+      transform: rotate(var(--tr, 0deg));
+      transition: right .25s var(--ease), transform .25s var(--ease), opacity .25s;
+    }
+    .book-tab:hover { right: -34px; opacity: 1; }
+    .book-tab.is-current { right: -38px; opacity: 1; transform: rotate(0deg); box-shadow: 3px 4px 12px rgba(150, 95, 120, .35); }
+    .book-tab:nth-child(1) { top: 64px;  --tr: -2deg; }
+    .book-tab:nth-child(2) { top: 122px; --tr: 1.5deg; }
+    .book-tab:nth-child(3) { top: 180px; --tr: -1.5deg; }
+    .book-tab:nth-child(4) { top: 238px; --tr: 2deg; }
 
     /* ---------- 爱好清单（memo 虚线框） ---------- */
     .memo {
@@ -228,7 +247,7 @@
       body { padding: 84px 12px 44px; }
       .book-wrap { max-width: 560px; }
       .book { height: auto; background: transparent; border-radius: 0; box-shadow: none; }
-      .book::before, .book::after, .book__spine, .book-nav, .page-num, .desktop-deco { display: none; }
+      .book::before, .book::after, .book__spine, .book-nav, .page-num, .desktop-deco, .book-tabs { display: none; }
       .spread {
         position: relative; inset: auto; display: block; border-radius: 0; overflow: visible;
         opacity: 1 !important; transform: none !important; pointer-events: auto; transition: none;
@@ -245,7 +264,7 @@
 
     /* ---------- 减少动态偏好 ---------- */
     @media (prefers-reduced-motion: reduce) {
-      .spread, .nav-btn, .polaroid, .toc-tab, .back-home, .lightbox, .lightbox__close { transition: none !important; }
+      .spread, .nav-btn, .polaroid, .book-tab, .toc-lines button, .back-home, .lightbox, .lightbox__close { transition: none !important; }
       .polaroid:hover { transform: rotate(var(--r, 0deg)); }
     }
   </style>
@@ -274,19 +293,12 @@
         </div>
         <div class="page">
           <h2 style="font-weight: 400; color: #8a6a76; font-size: 1.3rem; letter-spacing: .4em; text-align: center; margin-top: 16px;">目 录</h2>
-          <button class="toc-tab" type="button" data-goto="1" style="--r: -1.6deg; --tab: #f6a6c8;">
-            <span class="tape tape--pink tape--s"></span>
-            女装<small>裙子、蝴蝶结，和一点点勇气</small>
-          </button>
-          <button class="toc-tab" type="button" data-goto="3" style="--r: 1.8deg; --tab: #9edbc2;">
-            <span class="tape tape--mint tape--s"></span>
-            爱好<small>代码、游戏，和软乎乎的东西</small>
-          </button>
-          <button class="toc-tab" type="button" data-goto="5" style="--r: -2deg; --tab: #cbb0f0;">
-            <span class="tape tape--purple tape--s"></span>
-            恋爱<small>还在等待的一页</small>
-          </button>
-          <span class="desktop-deco" style="position: absolute; bottom: 100px; left: 36px; font-size: .85rem; color: #c09aa6; transform: rotate(-6deg);">点贴纸直接跳！</span>
+          <ul class="toc-lines">
+            <li><button type="button" data-goto="1"><span class="toc-name">女装</span><span class="toc-dots"></span><span class="toc-pg">第 2 页</span></button></li>
+            <li><button type="button" data-goto="3"><span class="toc-name">爱好</span><span class="toc-dots"></span><span class="toc-pg">第 4 页</span></button></li>
+            <li><button type="button" data-goto="5"><span class="toc-name">恋爱</span><span class="toc-dots"></span><span class="toc-pg">第 6 页</span></button></li>
+          </ul>
+          <span class="desktop-deco" style="position: absolute; bottom: 100px; left: 36px; font-size: .85rem; color: #c09aa6; transform: rotate(-6deg);">书边的标签也能直接跳！</span>
           <svg class="arrow desktop-deco" style="bottom: 38px; left: 30px; width: 96px; height: 64px;" viewBox="0 0 96 64" aria-hidden="true">
             <path d="M8,8 C30,44 55,52 84,40 M84,40 l-13,-4 M84,40 l-5,13" fill="none" stroke="#e86a92" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
@@ -297,7 +309,7 @@
       <section class="spread" aria-label="女装 · 其一">
         <div class="page">
           <span class="chapter-tag">第一章 · 女装</span>
-          <figure class="polaroid" data-photo="nv1" style="width: 235px; margin: 32px auto 0;">
+          <figure class="polaroid" data-photo="nv1" style="width: 270px; margin: 30px auto 0;">
             <span class="tape tape--pink"></span>
           </figure>
           <span class="sticker" style="bottom: 44px; left: 36px; font-size: 1.6rem; transform: rotate(-12deg);">🎀</span>
@@ -434,6 +446,14 @@
       <p class="page-num" id="pageNum">第 1 / 6 页</p>
     </div>
 
+    <!-- 书缘索引标签：夹在书页里的章节小标签（移动端随书本外壳一起隐藏） -->
+    <nav class="book-tabs" aria-label="章节标签">
+      <button class="book-tab" type="button" data-goto="0" style="--tab: #f7dc7a;">目录</button>
+      <button class="book-tab" type="button" data-goto="1" style="--tab: #f6a6c8;">女装</button>
+      <button class="book-tab" type="button" data-goto="3" style="--tab: #a8dcc3;">爱好</button>
+      <button class="book-tab" type="button" data-goto="5" style="--tab: #d3bcf2;">恋爱</button>
+    </nav>
+
     <div class="book-nav">
       <button class="nav-btn" id="prevBtn" type="button">← 上一页</button>
       <button class="nav-btn" id="nextBtn" type="button">下一页 →</button>
@@ -458,10 +478,10 @@
          id 对应上面 HTML 里 <figure data-photo="..."> 的占位框
          ================================================================ */
       var PHOTOS = [
-        { id: 'nv1', chapter: '女装', src: 'https://picsum.photos/seed/sheng-nv1/600/780', caption: '第一套小裙子', date: '2026.05.20' },
-        { id: 'nv2', chapter: '女装', src: 'https://picsum.photos/seed/sheng-nv2/560/640', caption: '对镜自拍', date: '2026.06.01' },
-        { id: 'nv3', chapter: '女装', src: 'https://picsum.photos/seed/sheng-nv3/560/640', caption: '蝴蝶结是本体', date: '2026.06.18' },
-        { id: 'nv4', chapter: '女装', src: 'https://picsum.photos/seed/sheng-nv4/600/620', caption: '出门逛街！', date: '2026.07.02' },
+        { id: 'nv1', chapter: '女装', src: 'photo/web/p002.jpg', caption: '女仆装', date: '2026.07.22' },
+        { id: 'nv2', chapter: '女装', src: 'photo/web/p001.jpg', caption: '穿JK的游戏高手', date: '2026.07.22' },
+        { id: 'nv3', chapter: '女装', src: 'photo/web/p003.jpg', caption: '怀念的14岁', date: '2026.07.22' },
+        { id: 'nv4', chapter: '女装', src: 'photo/web/p004.jpg', caption: '太阳下的瞬间', date: '2026.07.22' },
         { id: 'ai1', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai1/640/540', caption: '折腾代码的下午', date: '2026.04.11' },
         { id: 'ai2', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai2/560/660', caption: '游戏时间', date: '2026.05.03' },
         { id: 'ai3', chapter: '爱好', src: 'https://picsum.photos/seed/sheng-ai3/560/620', caption: '软乎乎收藏', date: '2026.06.25' },
@@ -523,11 +543,17 @@
       var prevBtn = document.getElementById('prevBtn');
       var nextBtn = document.getElementById('nextBtn');
       var cur = 0, animating = false;
+      var history = [];                       // 标签跳页的来源栈：「上一页」优先跳回来源页
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('.book-tab'));
+      var chapterOf = [0, 1, 1, 2, 2, 3];     // 每个跨页属于哪个标签（目录/女装/爱好/恋爱）
 
       function update() {
         pageNum.textContent = '第 ' + (cur + 1) + ' / ' + spreads.length + ' 页';
-        prevBtn.disabled = cur === 0;
+        prevBtn.disabled = cur === 0 && history.length === 0;
         nextBtn.disabled = cur === spreads.length - 1;
+        tabs.forEach(function (t, idx) {
+          t.classList.toggle('is-current', idx === chapterOf[cur]);
+        });
       }
 
       function go(i, dir) {
@@ -556,11 +582,23 @@
         }, 420);
       }
 
-      prevBtn.addEventListener('click', function () { go(cur - 1, -1); });
-      nextBtn.addEventListener('click', function () { go(cur + 1, 1); });
+      /* 「上一页」：刚用标签跳过来的就先跳回来源页，否则正常往前翻 */
+      function prev() {
+        if (history.length) {
+          var back = history.pop();
+          go(back, back > cur ? 1 : -1);
+        } else {
+          go(cur - 1, -1);
+        }
+      }
+      function next() { go(cur + 1, 1); }
+      prevBtn.addEventListener('click', prev);
+      nextBtn.addEventListener('click', next);
       document.querySelectorAll('[data-goto]').forEach(function (el) {
         el.addEventListener('click', function () {
           var i = parseInt(el.getAttribute('data-goto'), 10);
+          if (animating || i === cur || i < 0 || i >= spreads.length) return;
+          history.push(cur);                  // 记下从哪页跳的，「上一页」先回这里
           go(i, i > cur ? 1 : -1);
         });
       });
@@ -569,8 +607,8 @@
           if (e.key === 'Escape') closeLb();
           return;
         }
-        if (e.key === 'ArrowLeft') go(cur - 1, -1);
-        else if (e.key === 'ArrowRight') go(cur + 1, 1);
+        if (e.key === 'ArrowLeft') prev();
+        else if (e.key === 'ArrowRight') next();
       });
 
       /* ---------- 起始页：?p=页码 可直接打开某一页 ---------- */
