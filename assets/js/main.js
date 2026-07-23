@@ -499,3 +499,34 @@
 
   btn.addEventListener("click", function () { refresh(true); });
 })();
+
+
+/* ============================================================
+   生日倒计时（hero 天气行）：距离下一个 3.13 还有多少天
+   ============================================================ */
+(function () {
+  "use strict";
+
+  var el = document.getElementById("birthdayText");
+  if (!el) return;
+
+  var BIRTH_MONTH = 2, BIRTH_DAY = 13;   /* 3 月 13 日（month 从 0 数） */
+  var DAY = 86400000;
+
+  function tick() {
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    /* 下一个生日（今天还没过就算今年的，过了算明年的） */
+    var b = new Date(today.getFullYear(), BIRTH_MONTH, BIRTH_DAY);
+    if (b < today) b = new Date(today.getFullYear() + 1, BIRTH_MONTH, BIRTH_DAY);
+    var d = Math.round((b - today) / DAY);
+
+    el.textContent = d === 0 ? "🎉 今天就是小圣的生日！"
+                   : d === 1 ? "🎂 明天就是生日啦"
+                   : "🎂 生日还有 " + d + " 天";
+  }
+
+  tick();
+  setInterval(tick, 60000);   /* 跨零点自动刷新 */
+})();
