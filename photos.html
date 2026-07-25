@@ -60,14 +60,29 @@
       border-radius: 22px;
       box-shadow: 0 24px 55px rgba(178, 110, 140, .28);
     }
-    /* 右侧书页厚度：一叠纸的细边（加宽出"书口"侧面，标签就插在这叠纸的不同深度） */
+    /* 右侧书口：一叠层层错落的纸——本体是带层缝/纸面色差的竖条纹侧面，
+       box-shadow 向右一层层错开，像真书口那样能看出一页压着一页（标签插在这叠纸的不同深度） */
     .book::before {
-      content: ''; position: absolute; top: 9px; bottom: 9px; right: -20px; width: 20px;
+      content: ''; position: absolute; top: 9px; bottom: 9px; right: -14px; width: 14px;
       border-radius: 0 6px 6px 0;
       background:
-        linear-gradient(90deg, rgba(150, 105, 90, .16), rgba(150, 105, 90, 0) 55%),
-        repeating-linear-gradient(180deg, var(--paper-line2) 0 2px, var(--paper-line) 2px 4px);
-      box-shadow: 3px 4px 8px rgba(150, 105, 90, .2);
+        linear-gradient(90deg, rgba(150, 105, 90, .22), rgba(150, 105, 90, 0) 60%),
+        repeating-linear-gradient(180deg,
+          #c9b795 0 1px,   /* 层间细缝 */
+          #f8eeda 1px 4px, /* 纸面 A */
+          #d6c5a4 4px 5px, /* 纸缘阴影 */
+          #eee0c2 5px 9px  /* 纸面 B（色调略异，层感更明显） */
+        );
+      box-shadow:
+        3px 0 0 #f4e9d0,
+        6px 0 0 #e0d1b2,
+        7px 0 0 rgba(140, 100, 75, .3),    /* 层缝 */
+        10px 0 0 #f7edda,
+        13px 0 0 #e2d3b6,
+        14px 0 0 rgba(140, 100, 75, .25),  /* 层缝 */
+        17px 0 0 #f2e7cc,
+        20px 0 0 #ddcfb0,
+        22px 3px 9px rgba(150, 105, 90, .3);  /* 最外一层 + 整叠投影 */
     }
     /* 底部书页厚度 */
     .book::after {
@@ -103,6 +118,38 @@
     }
     .spread.is-active { z-index: 2; opacity: 1; pointer-events: auto; }
     .page { position: relative; width: 50%; height: 100%; padding: 40px 38px; }
+
+    /* ---------- 翻书动效（桌面端；克隆层只在翻动瞬间存在，结束即移除） ----------
+       结构：stage（透视舞台，盖住整本书）└─ leaf：绕书脊旋转的那张纸，
+       front/back 两张脸各贴一个跨页克隆；静止画面由真跨页自己充当（纸张转到
+       竖直的瞬间旧页换新页）。脸里塞 200% 宽的 sheet（整本书宽度的跨页克隆），
+       靠 left 偏移只露出对应的一半——跨页装饰（小河/星星）也能被正确裁切 */
+    /* z-index 7：必须高过书脊阴影(6)和页码(7)——3D 子树上方若盖着 2D 半透明元素，
+       软渲染会迫使纸张扁平化/双重渲染（半透明透底），翻动的纸应位于书脊凹槽之上 */
+    .flip-stage { position: absolute; inset: 0; z-index: 7; perspective: 2400px; pointer-events: none; }
+    .flip-sheet { position: absolute; top: 0; bottom: 0; width: 200%; }
+    .flip-face--back > .flip-sheet { left: 0; }
+    .flip-face--front > .flip-sheet { left: -100%; }
+    /* z-index 必须 auto：克隆体若带 z-index（.spread 默认 1）会在 3D 脸面内形成层叠上下文，
+       软渲染下直接打穿脸面背景造成透底叠影（无头实测二分定位），auto 后内部元素层叠关系不变 */
+    .flip-sheet > .spread { opacity: 1 !important; transform: none !important; transition: none; pointer-events: none; z-index: auto; }
+    .flip-leaf {
+      position: absolute; top: 0; bottom: 0; left: 50%; width: 50%;
+      transform-style: preserve-3d; transform-origin: left center; will-change: transform;
+    }
+    .flip-face {
+      position: absolute; inset: 0; overflow: hidden;
+      backface-visibility: hidden; -webkit-backface-visibility: hidden;
+      /* 纸不透明。必须用纯色：渐变背景贴在 3D 变换元素上会渲染成半透明、透出下层内容
+        （无头/软渲染实测踩过）。#fff8ea = .book 渐变（#fffaf0→#fff6e4）的中间色 */
+      background: #fff8ea;
+    }
+    .flip-face--front { border-radius: 0 22px 22px 0; }
+    .flip-face--back { transform: rotateY(180deg); border-radius: 22px 0 0 22px; }
+    /* 翻动时纸面的明暗：靠书脊一侧深，随角度渐显渐隐（JS 驱动 opacity） */
+    .flip-shade { position: absolute; inset: 0; opacity: 0; }
+    .flip-face--front > .flip-shade { background: linear-gradient(90deg, rgba(105, 75, 55, .5), rgba(105, 75, 55, 0) 62%); }
+    .flip-face--back > .flip-shade { background: linear-gradient(270deg, rgba(105, 75, 55, .5), rgba(105, 75, 55, 0) 62%); }
 
     /* ---------- 翻页按钮 ---------- */
     .book-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 30px; padding: 0 6px; }
@@ -540,7 +587,7 @@
       document.getElementById('lbFigure').addEventListener('click', function (e) { e.stopPropagation(); });
       document.getElementById('lbClose').addEventListener('click', closeLb);
 
-      /* ---------- 翻页（0.4s 滑出淡出 + 滑入淡入） ---------- */
+      /* ---------- 翻页：桌面端翻书页（克隆层 3D 旋转）；移动端/减动效退化为滑动切换 ---------- */
       var spreads = Array.prototype.slice.call(document.querySelectorAll('.spread'));
       var pageNum = document.getElementById('pageNum');
       var prevBtn = document.getElementById('prevBtn');
@@ -549,6 +596,9 @@
       var history = [];                       // 标签跳页的来源栈：「上一页」优先跳回来源页
       var tabs = Array.prototype.slice.call(document.querySelectorAll('.book-tab'));
       var chapterOf = [0, 1, 1, 2, 2, 3];     // 每个跨页属于哪个标签（目录/女装/爱好/恋爱）
+      var book = document.getElementById('book');
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var mqMobile = window.matchMedia('(max-width: 767px)');
 
       function update() {
         pageNum.textContent = '第 ' + (cur + 1) + ' / ' + spreads.length + ' 页';
@@ -561,6 +611,117 @@
 
       function go(i, dir) {
         if (animating || i === cur || i < 0 || i >= spreads.length) return;
+        if (reduceMotion || mqMobile.matches) slideGo(i, dir);
+        else flipGo(i, dir);
+      }
+
+      /* 翻书页（两段式）：纸张绕书脊 rotateY 翻过去。前半段衬底 = 旧跨页（正面克隆
+         盖住的右半与旧右页一致），纸张转到竖直（投影≈0 宽）的瞬间把衬底换成新跨页，
+         后半段背面克隆盖住新左页收尾。画面全程只有"真页 + 一张纸的两个克隆"，
+         比贴静止半页的方案少一半克隆层，翻起来更顺 */
+      function flipGo(i, dir) {
+        animating = true;
+        var old = spreads[cur], nu = spreads[i];
+        var from, to, frontPg, backPg;
+        if (dir > 0) {          // 往后翻：纸从右边掀起，正面=旧右页，背面=新左页
+          from = 0; to = -180; frontPg = old; backPg = nu;
+        } else {                // 往前翻：纸从左边掀回，背面=旧左页，正面=新右页
+          from = -180; to = 0; frontPg = nu; backPg = old;
+        }
+        var mid = (from + to) / 2;
+
+        function sheetOf(spreadEl) {          // 200% 宽的整书克隆，脸面裁出对应半边
+          var sheet = document.createElement('div');
+          sheet.className = 'flip-sheet';
+          var clone = spreadEl.cloneNode(true);
+          clone.classList.remove('is-active');  // 克隆只是"照片"，不继承激活态
+          clone.setAttribute('aria-hidden', 'true');
+          clone.querySelectorAll('img').forEach(function (im) { im.loading = 'eager'; });
+          sheet.appendChild(clone);
+          return sheet;
+        }
+        function faceOf(spreadEl, cls) {
+          var face = document.createElement('div');
+          face.className = 'flip-face flip-face--' + cls;
+          face.appendChild(sheetOf(spreadEl));
+          var shade = document.createElement('div');
+          shade.className = 'flip-shade';
+          face.appendChild(shade);
+          return { face: face, shade: shade };
+        }
+
+        var stage = document.createElement('div');
+        stage.className = 'flip-stage';
+        stage.setAttribute('aria-hidden', 'true');
+        var leaf = document.createElement('div');
+        leaf.className = 'flip-leaf';
+        var fw = faceOf(frontPg, 'front'), bw = faceOf(backPg, 'back');
+        leaf.appendChild(fw.face);
+        leaf.appendChild(bw.face);
+        leaf.style.transform = 'rotateY(' + from + 'deg)';
+        stage.appendChild(leaf);
+        book.appendChild(stage);
+
+        old.style.pointerEvents = 'none';     // 翻动中两页都不可点（防翻页途中戳开 lightbox）
+        cur = i;
+        update();
+
+        var D1 = 380, D2 = 400;
+        var done = false;
+        function finish() {
+          if (done) return;
+          done = true;
+          old.classList.remove('is-active');
+          old.style.transition = '';
+          old.style.opacity = '';
+          old.style.pointerEvents = '';
+          nu.style.transition = 'none';       // 目标页瞬显（无淡入），与 stage 同帧交接
+          nu.style.opacity = '1';
+          nu.classList.add('is-active');
+          nu.style.pointerEvents = '';
+          stage.remove();
+          void nu.offsetWidth;                // 真页画好后再恢复过渡，防交接闪现
+          nu.style.transition = '';
+          nu.style.opacity = '';
+          animating = false;
+        }
+        /* 纸面明暗：前半段先见人的那张脸渐深，后半段另一张脸渐浅 */
+        var firstShade = dir > 0 ? fw.shade : bw.shade;
+        var secondShade = dir > 0 ? bw.shade : fw.shade;
+
+        firstShade.animate([{ opacity: 0 }, { opacity: 1 }], { duration: D1, easing: 'ease-in', fill: 'both' });
+        var a1 = leaf.animate(
+          [{ transform: 'rotateY(' + from + 'deg)' }, { transform: 'rotateY(' + mid + 'deg)' }],
+          { duration: D1, easing: 'cubic-bezier(.6,.05,.4,1)', fill: 'both' }
+        );
+        /* 纸张竖直的瞬间换衬底：旧页瞬隐、新页瞬显（此刻纸投影≈0 宽，交换不可见）。
+           onfinish 之外再用定时器兜底——动画事件在某些环境（如无头）可能不按时触发 */
+        var swapped = false;
+        function swap() {
+          if (swapped) return;
+          swapped = true;
+          old.classList.remove('is-active');
+          old.style.transition = 'none';
+          old.style.opacity = '0';
+          nu.style.transition = 'none';
+          nu.style.opacity = '1';
+          nu.classList.add('is-active');
+          nu.style.pointerEvents = 'none';
+          secondShade.animate([{ opacity: 1 }, { opacity: 0 }], { duration: D2, easing: 'ease-out', fill: 'both' });
+          var a2 = leaf.animate(
+            [{ transform: 'rotateY(' + mid + 'deg)' }, { transform: 'rotateY(' + to + 'deg)' }],
+            { duration: D2, easing: 'cubic-bezier(.2,.6,.35,1)', fill: 'both' }
+          );
+          a2.onfinish = finish;
+          setTimeout(finish, D2 + 150);       // onfinish 兜底
+        }
+        a1.onfinish = swap;
+        setTimeout(swap, D1 + 60);
+        setTimeout(finish, D1 + D2 + 300);    // 链路兜底
+      }
+
+      /* 滑动切换（0.4s 滑出淡入）：移动端平铺和减少动态偏好时用 */
+      function slideGo(i, dir) {
         animating = true;
         var old = spreads[cur], nu = spreads[i];
         var outX = dir > 0 ? '-46px' : '46px';
