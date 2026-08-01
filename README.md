@@ -9,6 +9,7 @@ sheng/
 ├── index.html          # 页面本体
 ├── music.html          # 听歌 + 专注页（动态壁纸 / 番茄钟 / TODO；点初音头上的 ▶ 也能进）
 ├── photos.html         # 相册页（摊开的手帐书，单文件实现：HTML+CSS+JS 全内联）
+├── notes.html          # 碎碎念（单文件实现：手帐风便签列表，数据在 script 顶部 NOTES 数组）
 ├── photo/              # 📷 照片源文件夹（原图直接塞这里）
 │   └── web/            #   压缩后的网页版——手帐书女装章正在用（p001~p004）
 ├── assets/
@@ -51,4 +52,5 @@ Vercel 直接把这个仓库关联进去即可，零配置（纯静态站点）�
   - **Todo 计划**：添加 / 点一下划线（未完成蓝点、完成绿勾 + 删除线）/ 悬停出 × 删除，存 localStorage `sheng-focus-todo`，刷新不丢
   - **更换壁纸**：Dock 的 🖼️ 弹层，当前界面切换不跳转；预设 4 张：Lo-Fi 咖啡店（雨丝+霓虹光晕）、日式房间昼/夜（Wallpaper Engine「Bunk」workshop 2134765860，RePKG 解包后 PIL 拼合背景与抽屉柜层）、水族馆画室（workshop 3038138638，RePKG 解包后按 `scene.json` 的 origin/scale 用 PIL 分层拼合——画板区域在原背景里是 alpha=0 透明镂空，要图层垫底、背景最后盖）。以后加壁纸：图丢进 `assets/img/scene/`，在 `assets/js/focus.js` 的 `WALLPAPERS` 数组加一项——每项可配 `glow`（霓虹光晕，位置按咖啡店调的）/ `rain`（雨丝）；选择存 localStorage `sheng-wallpaper`。注意配件显隐要用 `style.display` 而非 `hidden` 属性——全局 reset 的 `img{display:block}` 会盖掉 UA 的 `[hidden]` 样式
 - **页面过渡**：首页 ⇄ 音乐页有纱幕过渡——去音乐页盖深紫蓝「入夜」渐变、回首页盖粉白「天亮」渐变，进入页面时纱幕自动淡出（CSS `page-veil-out` 动画，不依赖 JS）。样式在 `.page-veil*`；离开拦截在 `main.js` 的 `leaveTo()`（暴露为 `window.shengLeave`，导航音乐链接和 pet.js 的 ▶ 按钮都走它）和 `focus.js`（头像回首页）；`prefers-reduced-motion` 时直接跳转无动画
+- **碎碎念**：首页「小角落」的碎碎念卡进 `notes.html`——**便利贴墙**（单文件实现，方格纸粉底）：纯色便利贴小方块（黄/粉/蓝/绿/紫五色循环）、顶部胶条、随机微倾，桌面双列错落 / 移动单列，每条带心情 emoji + 日期，按数组顺序倒序排。**发新的一条 = 打开 notes.html，在 script 顶部 `NOTES` 数组【最上面】加一行 `{ d: '2026.07.28', m: '🎉', t: '正文（换行用 \n）' }`，push 上线**（m 可省略）。页面右下角还有**弹幕发射器（+ 号）**：访客留言会以弹幕形式飞过屏幕（随机弹道/速度/透明度 50%~90%，每 2.4s 一条循环放送），**可取色器自定义弹幕颜色**（选择存 `sheng-notes-dmk-color`，暖场弹幕是淡蓝色），**留言存在访客自己浏览器的 localStorage**（`sheng-notes-danmaku`，最多 60 条）——纯静态站没有后端，想全站共享留言需接 LeanCloud 等 BaaS（替换 script 里的 `dmStore` 即可）
 - **文字内容**：都在 `index.html` 里，直接改

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>碎碎念 ✿ 小圣的小窝</title>
+  <meta name="description" content="小圣的碎碎念：一些不成句子的话，说给自己听。" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       碎碎念（notes.html · 单文件实现）
+       手帐风便签列表，数据在 script 顶部 NOTES 数组
+       ============================================================ */
+    :root {
+      --pink: #ec6f9c;
+      --pink-deep: #d94f82;
+      --ink: #6f5560;
+      --ease: cubic-bezier(.22, .61, .36, 1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      font-family: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background-color: #fdeef4;
+      background-image:
+        linear-gradient(rgba(238, 152, 188, .15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(238, 152, 188, .15) 1px, transparent 1px);
+      background-size: 26px 26px;
+      padding: 88px 18px 64px;
+      overflow-x: hidden;
+    }
+
+    /* ---------- 回小窝 ---------- */
+    .back-home {
+      position: fixed; top: 20px; left: 22px; z-index: 40;
+      padding: 9px 18px; background: #fff; color: var(--pink-deep);
+      border-radius: 999px; text-decoration: none; font-size: .98rem;
+      box-shadow: 0 3px 12px rgba(210, 110, 150, .25);
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+    .back-home:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(210, 110, 150, .34); }
+
+    /* ---------- 页头 ---------- */
+    .notes-header { text-align: center; }
+    .notes-title { font-size: clamp(2.1rem, 5vw, 2.9rem); font-weight: 400; color: #5f4450; letter-spacing: .06em; }
+    .notes-title span { color: var(--pink); }
+    .title-underline { display: block; width: 220px; margin: 8px auto 14px; }
+    .notes-sub { color: #a57e8b; font-size: 1.02rem; }
+
+    /* ---------- 便利贴墙（统一 1:1 小方块，纯色 + 顶部胶条） ---------- */
+    .notes-list {
+      max-width: 1100px; margin: 40px auto 0;
+      display: grid; grid-template-columns: repeat(auto-fill, 160px);
+      gap: 22px; justify-content: center;
+    }
+    .note {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      border-radius: 2px 2px 8px 2px;
+      padding: 22px 14px 12px;
+      box-shadow: 0 8px 18px rgba(178, 110, 140, .22);
+      transform: rotate(var(--r, 0deg));
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+    /* 便利贴顶部的胶条 */
+    .note::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 13px;
+      background: rgba(120, 80, 90, .07); border-radius: 2px 2px 0 0;
+    }
+    .note:hover { transform: rotate(0deg) translateY(-3px); box-shadow: 0 14px 28px rgba(178, 110, 140, .3); }
+    /* 便利贴五色循环 */
+    .note--yellow { background: #fff3b8; }
+    .note--pink   { background: #ffd9e4; }
+    .note--blue   { background: #d3e9ff; }
+    .note--mint   { background: #d8f3e3; }
+    .note--purple { background: #e8ddf7; }
+    .note__meta {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+      margin-bottom: 8px;
+    }
+    .note__mood { font-size: 1rem; line-height: 1; }
+    .note__date { font-size: .72rem; color: rgba(150, 115, 127, .75); letter-spacing: .05em; }
+    .note__text { line-height: 1.75; font-size: .85rem; color: #6b5560; white-space: pre-wrap; word-break: break-word; }
+
+    /* ---------- 弹幕 ---------- */
+    .dmk {
+      position: fixed; left: 100vw; z-index: 30;
+      white-space: nowrap; pointer-events: none;
+      font-size: 1.06rem; color: #7c5f6a;
+      text-shadow: 0 0 4px #fff, 0 0 8px #fff;
+      animation: dmk-fly var(--dur, 11s) linear forwards;
+    }
+    @keyframes dmk-fly { to { transform: translateX(calc(-100vw - 110%)); } }
+
+    /* ---------- 发射弹幕（右下角 + 号） ---------- */
+    .dmk-fab {
+      position: fixed; right: 26px; bottom: 26px; z-index: 50;
+      width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
+      font-size: 1.7rem; line-height: 1; color: #fff;
+      background: linear-gradient(135deg, #f48fb1, var(--pink));
+      box-shadow: 0 6px 16px rgba(236, 111, 156, .4);
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+    }
+    .dmk-fab:hover { transform: translateY(-3px) rotate(90deg); box-shadow: 0 10px 22px rgba(236, 111, 156, .5); }
+    .dmk-panel {
+      position: fixed; right: 26px; bottom: 90px; z-index: 50;
+      display: flex; gap: 8px; align-items: center;
+      padding: 10px 12px; background: #fffdf8; border-radius: 14px;
+      box-shadow: 0 10px 26px rgba(178, 110, 140, .3);
+      opacity: 0; transform: translateY(8px); pointer-events: none;
+      transition: opacity .25s var(--ease), transform .25s var(--ease);
+    }
+    .dmk-panel.is-open { opacity: 1; transform: none; pointer-events: auto; }
+    .dmk-panel input {
+      width: 190px; padding: 8px 12px; border-radius: 999px;
+      border: 1.5px solid rgba(236, 111, 156, .35); outline: none;
+      font-family: inherit; font-size: .98rem; color: var(--ink); background: #fff;
+    }
+    .dmk-panel input:focus { border-color: var(--pink); }
+    .dmk-panel button {
+      padding: 8px 16px; border: none; border-radius: 999px; cursor: pointer;
+      font-family: inherit; font-size: .95rem; color: #fff;
+      background: linear-gradient(135deg, #f48fb1, var(--pink));
+      transition: transform .2s var(--ease);
+    }
+    .dmk-panel button:hover { transform: translateY(-1px); }
+    /* 弹幕取色器：圆形色块，点开是系统色盘 */
+    .dmk-color {
+      width: 34px; height: 34px; padding: 0; border: none; border-radius: 50%;
+      background: none; cursor: pointer; flex-shrink: 0;
+    }
+    .dmk-color::-webkit-color-swatch-wrapper { padding: 0; }
+    .dmk-color::-webkit-color-swatch { border: 2px solid #fff; border-radius: 50%; box-shadow: 0 1px 4px rgba(178, 110, 140, .4); }
+
+    /* ---------- 页脚 ---------- */
+    .notes-footer { text-align: center; color: #c09aa6; margin-top: 52px; font-size: .95rem; }
+
+    /* ---------- 手机端（方块略缩小） ---------- */
+    @media (max-width: 767px) {
+      body { padding: 84px 14px 48px; }
+      .notes-list { grid-template-columns: repeat(auto-fill, 130px); gap: 16px; }
+      .note { padding: 18px 12px 10px; }
+      .note__text { font-size: .8rem; line-height: 1.65; }
+      .dmk-panel { right: 12px; }
+      .dmk-panel input { width: 150px; }
+      .dmk-fab { right: 16px; bottom: 18px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .note, .back-home { transition: none !important; }
+      .note:hover { transform: rotate(var(--r, 0deg)); }
+      .dmk, .dmk-fab, .dmk-panel { display: none !important; }   /* 减动效时弹幕整体关闭 */
+    }
+  </style>
+</head>
+<body>
+  <a class="back-home" href="index.html" title="回到小窝">❮ 回小窝</a>
+
+  <header class="notes-header">
+    <h1 class="notes-title">碎碎念 <span>✿</span></h1>
+    <svg class="title-underline" viewBox="0 0 300 18" aria-hidden="true">
+      <path d="M4,10 C60,2 120,16 170,9 S 270,4 296,10" fill="none" stroke="#f092b4" stroke-width="4" stroke-linecap="round" opacity=".7" />
+    </svg>
+    <p class="notes-sub">一些不成句子的话，说给自己听 ✿</p>
+  </header>
+
+  <main class="notes-list" id="notesList"></main>
+
+  <p class="notes-footer">今天就碎碎念到这里 ✿</p>
+
+  <!-- 弹幕发射器：右下角 + 号，留言以弹幕形式飞过屏幕（存访客本地） -->
+  <button class="dmk-fab" id="dmkFab" type="button" title="发一条弹幕" aria-label="发一条弹幕">+</button>
+  <div class="dmk-panel" id="dmkPanel">
+    <input id="dmkColor" class="dmk-color" type="color" value="#d94f82" title="弹幕颜色" aria-label="弹幕颜色" />
+    <input id="dmkInput" type="text" maxlength="30" placeholder="写点什么吧…（30 字内）" />
+    <button id="dmkSend" type="button">发射 ✿</button>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* ================================================================
+         碎碎念数据：想发新的，就在数组【最上面】加一条，然后 push 上线
+         d = 日期，m = 心情 emoji（可省略），t = 正文（换行直接写在 \n）
+         便利贴是固定大小的小方块，正文建议 ≤60 字，写不下会被截断
+         ================================================================ */
+      var NOTES = [
+        { d: '2026.07.28', m: '🎉', t: '碎碎念开张啦。\n不讲究格式，也不修图。' },
+        { d: '2026.07.27', m: '💻', t: '新电脑到了，幻16 Air。\n以后要拿它折腾更多东西。' },
+        { d: '2026.07.25', m: '📖', t: '手帐书会翻页了，\n真的"翻过去"的那种。' }
+      ];
+
+      var COLORS = ['yellow', 'pink', 'blue', 'mint', 'purple'];   // 便利贴五色循环
+      var list = document.getElementById('notesList');
+
+      NOTES.forEach(function (n, i) {
+        var card = document.createElement('article');
+        card.className = 'note note--' + COLORS[i % COLORS.length];
+        card.style.setProperty('--r', (Math.random() * 3 - 1.5).toFixed(1) + 'deg');
+
+        var meta = document.createElement('div');
+        meta.className = 'note__meta';
+        var mood = document.createElement('span');
+        mood.className = 'note__mood';
+        mood.textContent = n.m || '✿';
+        var date = document.createElement('span');
+        date.className = 'note__date';
+        date.textContent = n.d;
+        meta.appendChild(mood);
+        meta.appendChild(date);
+        card.appendChild(meta);
+
+        var text = document.createElement('p');
+        text.className = 'note__text';
+        text.textContent = n.t;
+        card.appendChild(text);
+
+        list.appendChild(card);
+      });
+
+      /* ================================================================
+         弹幕：右下角 + 号发射，留言飞过屏幕
+         存储 = 访客自己浏览器的 localStorage（纯静态站没有后端；
+         想全站共享留言需接 LeanCloud 等 BaaS，接的时候替换 dmStore 即可）
+         ================================================================ */
+      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        var DM_KEY = 'sheng-notes-danmaku';
+        var dmStore = {
+          load: function () {
+            try { return JSON.parse(localStorage.getItem(DM_KEY)) || []; }
+            catch (e) { return []; }
+          },
+          add: function (t) {
+            var a = this.load();
+            a.push(t);
+            localStorage.setItem(DM_KEY, JSON.stringify(a.slice(-60)));   // 最多留 60 条
+          }
+        };
+        /* 本地还没有留言时的暖场弹幕（淡蓝色） */
+        var SEED_COLOR = '#7fa8e8';
+        var SEED = ['碎碎念开张啦 ✿', '前排围观', 'owo', '今天也要开开心心', '摸鱼摸到这来了', '小圣好可爱！']
+          .map(function (t) { return { t: t, c: SEED_COLOR }; });
+        /* 弹幕统一为 {t, c}；本地存的旧格式纯字符串兼容成默认色 */
+        function norm(x) { return typeof x === 'string' ? { t: x, c: null } : x; }
+        var pool = dmStore.load().map(norm);
+        if (!pool.length) pool = SEED.slice();
+
+        function spawnDmk(item) {
+          var el = document.createElement('div');
+          el.className = 'dmk';
+          el.textContent = item.t;
+          if (item.c) el.style.color = item.c;
+          el.style.top = (9 + Math.random() * 52) + 'vh';              // 随机弹道高度
+          el.style.opacity = (0.5 + Math.random() * 0.4).toFixed(2);   // 随机透明度 50%~90%
+          el.style.setProperty('--dur', (9 + Math.random() * 6).toFixed(1) + 's');
+          document.body.appendChild(el);
+          el.addEventListener('animationend', function () { el.remove(); });
+        }
+
+        /* 循环放送：每 2.4s 一条，播完一轮洗牌重来 */
+        var idx = 0;
+        function tick() {
+          if (idx >= pool.length) {
+            idx = 0;
+            pool = pool.sort(function () { return Math.random() - 0.5; });
+          }
+          spawnDmk(pool[idx++]);
+        }
+        setTimeout(tick, 1200);
+        setInterval(tick, 2400);
+
+        /* + 号面板与发射（颜色选择存 localStorage，下次还用） */
+        var fab = document.getElementById('dmkFab');
+        var panel = document.getElementById('dmkPanel');
+        var input = document.getElementById('dmkInput');
+        var colorInput = document.getElementById('dmkColor');
+        var COLOR_KEY = 'sheng-notes-dmk-color';
+        try {
+          var savedColor = localStorage.getItem(COLOR_KEY);
+          if (savedColor) colorInput.value = savedColor;
+        } catch (e) {}
+        colorInput.addEventListener('change', function () {
+          try { localStorage.setItem(COLOR_KEY, colorInput.value); } catch (e) {}
+        });
+        function closePanel() { panel.classList.remove('is-open'); }
+        fab.addEventListener('click', function (e) {
+          e.stopPropagation();
+          panel.classList.toggle('is-open');
+          if (panel.classList.contains('is-open')) input.focus();
+        });
+        document.addEventListener('click', function (e) {
+          if (!panel.contains(e.target)) closePanel();
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') closePanel();
+        });
+        function fire() {
+          var t = input.value.trim();
+          if (!t) return;
+          var item = { t: t, c: colorInput.value };
+          input.value = '';
+          dmStore.add(item);
+          pool.push(item);
+          spawnDmk(item);
+          closePanel();
+        }
+        document.getElementById('dmkSend').addEventListener('click', fire);
+        input.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') fire();
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
