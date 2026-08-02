@@ -548,7 +548,6 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 .corner__entry p { margin: 0; color: var(--text-soft); }
 
 .corner__card {
-  grid-column: 1 / -1;   /* 小角落卡片数为奇数时，在建卡独占一行填满 */
   background: var(--card);
   border: 2px dashed var(--accent);
   border-radius: var(--radius-lg);
