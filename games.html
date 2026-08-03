@@ -71,7 +71,7 @@
       box-shadow: 0 12px 28px rgba(178, 110, 140, .22);
     }
     #board { display: block; width: min(528px, calc(100vw - 300px)); height: auto; cursor: pointer; }
-    #gboard { display: block; width: min(560px, calc(100vw - 300px)); height: auto; cursor: pointer; }
+    #gboard { display: block; width: min(720px, calc(100vw - 300px)); height: auto; cursor: pointer; }
 
     .xq-side { width: 300px; display: flex; flex-direction: column; gap: 14px; }
     .panel {
@@ -129,7 +129,8 @@
       .side-nav__home { margin-left: auto; }
       .xq-main { flex-direction: column; align-items: center; }
       .xq-side { width: min(528px, calc(100vw - 28px)); }
-      #board, #gboard { width: min(528px, calc(100vw - 28px)); }
+      #board { width: min(528px, calc(100vw - 28px)); }
+      #gboard { width: min(720px, calc(100vw - 28px)); }
     }
     @media (prefers-reduced-motion: reduce) {
       .side-nav__item, .btns button { transition: none !important; }
@@ -191,7 +192,7 @@
       </header>
       <div class="xq-main">
         <div class="xq-board-wrap">
-          <canvas id="gboard" width="620" height="620"></canvas>
+          <canvas id="gboard" width="840" height="620"></canvas>
         </div>
         <aside class="xq-side">
           <div class="panel">
@@ -1061,11 +1062,13 @@
 
       var canvas = document.getElementById('gboard');
       var ctx = canvas.getContext('2d');
-      var N = 15, CELL = 40, GO = 30;          // 30 + 14*40 = 590，居中留边
+      var N = 15, CELL = 40, GOX = 140, GOY = 30;   // 棋盘区 140..700，左右各 110/140 留给棋盒
       var EMPTY = 0, BLACK = 1, WHITE = 2;
+      var BOX_B = { x: 62, y: 310 }, BOX_W = { x: 778, y: 310 };   // 黑盒在左，白盒在右
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       var gb, gturn, gplayer, gai, ghist, gLast, gover, ganim, gWinLine;
+      var gfly = null;   // 棋子飞回棋盒的群体动画 {sprites, t0, el}
 
       var statusEl = document.getElementById('gstatus');
       var sideSel = document.getElementById('gsideSel');
@@ -1091,7 +1094,22 @@
       }
 
       /* ---------- 绘制 ---------- */
-      function gp(x) { return GO + x * CELL; }
+      function gp(x) { return GOX + x * CELL; }
+      function gy(y) { return GOY + y * CELL; }
+      /* 棋盒：木碗 + 三颗装饰子 */
+      function drawBowl(cx, cy, color) {
+        var g = ctx.createRadialGradient(cx - 12, cy - 14, 8, cx, cy, 50);
+        g.addColorStop(0, '#b58960'); g.addColorStop(1, '#7a5232');
+        ctx.beginPath(); ctx.arc(cx, cy, 46, 0, Math.PI * 2);
+        ctx.fillStyle = g; ctx.fill();
+        ctx.strokeStyle = '#5d3f24'; ctx.lineWidth = 2.5; ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(60, 40, 26, .55)'; ctx.fill();
+        ctx.lineWidth = 1;
+        drawStone(cx - 10, cy - 5, color, 0.68);
+        drawStone(cx + 12, cy - 2, color, 0.68);
+        drawStone(cx + 1, cy + 11, color, 0.68);
+      }
       function render() {
         ctx.fillStyle = '#f9e7c3';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1099,42 +1117,62 @@
         ctx.lineWidth = 1;
         var i;
         for (i = 0; i < N; i++) {
-          ctx.beginPath(); ctx.moveTo(gp(0), gp(i)); ctx.lineTo(gp(N - 1), gp(i)); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(gp(i), gp(0)); ctx.lineTo(gp(i), gp(N - 1)); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(gp(0), gy(i)); ctx.lineTo(gp(N - 1), gy(i)); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(gp(i), gy(0)); ctx.lineTo(gp(i), gy(N - 1)); ctx.stroke();
         }
         ctx.lineWidth = 3;
-        ctx.strokeRect(gp(0) - 4, gp(0) - 4, CELL * (N - 1) + 8, CELL * (N - 1) + 8);
+        ctx.strokeRect(gp(0) - 4, gy(0) - 4, CELL * (N - 1) + 8, CELL * (N - 1) + 8);
         /* 星位 */
         ctx.fillStyle = '#8a6a4a';
         [[3, 3], [3, 11], [11, 3], [11, 11], [7, 7]].forEach(function (s) {
-          ctx.beginPath(); ctx.arc(gp(s[0]), gp(s[1]), 4, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(gp(s[0]), gy(s[1]), 4, 0, Math.PI * 2); ctx.fill();
         });
         /* 棋子 */
         for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
           var p = gb[y][x];
           if (p === EMPTY) continue;
-          if (ganim && ganim.x === x && ganim.y === y) continue;   // 落子动画单独画
-          drawStone(gp(x), gp(y), p, 1);
-        }
-        if (ganim) {
-          var k = Math.max(0, Math.min(1, ganim.k));
-          var s = 1 - Math.pow(1 - k, 3);
-          drawStone(gp(ganim.x), gp(ganim.y), ganim.color, 0.3 + 0.7 * s);
+          if (ganim && ganim.x === x && ganim.y === y) continue;   // 飞行中的新子单独画
+          drawStone(gp(x), gy(y), p, 1);
         }
         /* 最后一手标记 */
-        if (gLast) {
+        if (gLast && !gfly) {
           ctx.fillStyle = 'rgba(236, 111, 156, .9)';
-          ctx.beginPath(); ctx.arc(gp(gLast.x), gp(gLast.y), 5, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(gp(gLast.x), gy(gLast.y), 5, 0, Math.PI * 2); ctx.fill();
         }
         /* 五连胜子高亮圈 */
         if (gWinLine) {
           ctx.strokeStyle = 'rgba(217, 79, 130, .9)';
           ctx.lineWidth = 3;
           gWinLine.forEach(function (c) {
-            ctx.beginPath(); ctx.arc(gp(c.x), gp(c.y), 20, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(gp(c.x), gy(c.y), 20, 0, Math.PI * 2); ctx.stroke();
           });
           ctx.lineWidth = 1;
         }
+        /* 落子飞行：从棋盒飞到落点 */
+        if (ganim) {
+          var k = Math.max(0, Math.min(1, ganim.k));
+          var e = 1 - Math.pow(1 - k, 2);
+          var cx = ganim.fx + (ganim.tx - ganim.fx) * e;
+          var cy = ganim.fy + (ganim.ty - ganim.fy) * e;
+          drawStone(cx, cy, ganim.color, 0.6 + 0.4 * e);
+        }
+        /* 群体飞回棋盒 */
+        if (gfly) {
+          gfly.sprites.forEach(function (sp) {
+            var kk = (gfly.el - sp.dly) / 300;
+            if (kk <= 0) return;
+            kk = kk > 1 ? 1 : kk;
+            var se = 1 - Math.pow(1 - kk, 2);
+            var sx = sp.fx + (sp.tx - sp.fx) * se;
+            var sy = sp.fy + (sp.ty - sp.fy) * se;
+            ctx.globalAlpha = 1 - se * 0.85;                  // 落进盒里渐隐
+            drawStone(sx, sy, sp.color, 1 - 0.3 * se);
+            ctx.globalAlpha = 1;
+          });
+        }
+        /* 棋盒画在最上层：飞回的棋子像落进碗里 */
+        drawBowl(BOX_B.x, BOX_B.y, BLACK);
+        drawBowl(BOX_W.x, BOX_W.y, WHITE);
       }
 
       function drawStone(cx, cy, color, scale) {
@@ -1154,7 +1192,7 @@
         ctx.lineWidth = 1;
       }
 
-      /* ---------- 落子动画（缩放弹入，rAF + setTimeout 兜底） ---------- */
+      /* ---------- 落子动画：棋子从棋盒飞到落点（rAF + setTimeout 兜底） ---------- */
       function playStone(x, y, color, done) {
         var finished = false;
         function finish() {
@@ -1165,12 +1203,44 @@
           done();
         }
         if (reduceMotion) { finish(); return; }
-        ganim = { x: x, y: y, color: color, t0: performance.now(), dur: 150, k: 0 };
+        var box = color === BLACK ? BOX_B : BOX_W;
+        ganim = {
+          fx: box.x, fy: box.y, tx: gp(x), ty: gy(y),
+          x: x, y: y, color: color, t0: performance.now(), dur: 190, k: 0
+        };
         setTimeout(finish, ganim.dur + 60);
         requestAnimationFrame(function fr(t) {
           if (finished || !ganim) return;
           ganim.k = (t - ganim.t0) / ganim.dur;
           if (ganim.k >= 1) { finish(); return; }
+          render();
+          requestAnimationFrame(fr);
+        });
+      }
+
+      /* ---------- 棋子飞回棋盒（悔棋/重开共用） ---------- */
+      function flyToBox(cells, done) {
+        if (!cells.length) { if (done) done(); return; }
+        if (reduceMotion) { if (done) done(); return; }
+        var sprites = cells.map(function (c, i) {
+          var box = c.color === BLACK ? BOX_B : BOX_W;
+          return { fx: gp(c.x), fy: gy(c.y), tx: box.x, ty: box.y, color: c.color, dly: i * 35 };
+        });
+        gfly = { sprites: sprites, t0: performance.now(), el: 0 };
+        var total = 300 + sprites.length * 35;
+        var finished = false;
+        function finish() {
+          if (finished) return;
+          finished = true;
+          gfly = null;
+          render();
+          if (done) done();
+        }
+        setTimeout(finish, total + 80);
+        requestAnimationFrame(function fr(t) {
+          if (finished || !gfly) return;
+          gfly.el = t - gfly.t0;
+          if (gfly.el >= total) { finish(); return; }
           render();
           requestAnimationFrame(fr);
         });
@@ -1298,37 +1368,61 @@
         var r = canvas.getBoundingClientRect();
         var mx = (e.clientX - r.left) * (canvas.width / r.width);
         var my = (e.clientY - r.top) * (canvas.height / r.height);
-        var bx = Math.round((mx - GO) / CELL), by = Math.round((my - GO) / CELL);
+        var bx = Math.round((mx - GOX) / CELL), by = Math.round((my - GOY) / CELL);
         if (bx < 0 || bx >= N || by < 0 || by >= N) return null;
         return { x: bx, y: by };
       }
 
       canvas.addEventListener('click', function (e) {
-        if (gover || ganim || gturn !== gplayer) return;
+        if (gover || ganim || gfly || gturn !== gplayer) return;
         var c = cellFromEvent(e);
         if (!c || gb[c.y][c.x] !== EMPTY) return;
         place(c.x, c.y, gplayer);
       });
 
-      /* 悔棋：连撤两手（小圣的 + 你的） */
+      /* 悔棋：连撤两手，棋子飞回棋盒 */
       undoBtn.addEventListener('click', function () {
-        if (gover || ganim || !ghist.length || gturn !== gplayer) return;
+        if (gover || ganim || gfly || !ghist.length || gturn !== gplayer) return;
+        var cells = [];
         var steps = 0;
         while (ghist.length && steps < 2) {
           var h = ghist.pop();
           gb[h.y][h.x] = EMPTY;
+          cells.push(h);
           steps++;
           if (ghist.length && ghist[ghist.length - 1].color === gplayer) break;
         }
         gLast = ghist.length ? ghist[ghist.length - 1] : null;
         gWinLine = null;
         render();
-        updateStatus();
-        updateButtons();
+        flyToBox(cells, function () {
+          updateStatus();
+          updateButtons();
+        });
       });
+      /* 重开：全场棋子各自飞回棋盒 */
       resetBtn.addEventListener('click', function () {
-        if (ganim) return;
-        ginit(gplayer);
+        if (ganim || gfly) return;
+        var cells = [];
+        for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+          if (gb[y][x] !== EMPTY) cells.push({ x: x, y: y, color: gb[y][x] });
+        }
+        if (!cells.length) { ginit(gplayer); return; }
+        /* 清场到新局，再播回盒动画 */
+        gb = [];
+        for (var yy = 0; yy < N; yy++) gb.push(new Array(N).fill(EMPTY));
+        ghist = [];
+        gLast = null;
+        gWinLine = null;
+        gover = false;
+        gturn = BLACK;
+        undoBtn.disabled = true;
+        render();
+        flyToBox(cells, function () {
+          updateStatus();
+          updateButtons();
+          if (gturn === gai) gaiTurn();
+        });
       });
       resignBtn.addEventListener('click', function () {
         if (gover) return;
@@ -1337,7 +1431,7 @@
         updateButtons();
       });
       sideSel.addEventListener('change', function () {
-        if (ganim) { sideSel.value = String(gplayer); return; }
+        if (ganim || gfly) { sideSel.value = String(gplayer); return; }
         ginit(parseInt(sideSel.value, 10));
       });
 
