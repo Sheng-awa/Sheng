@@ -71,6 +71,7 @@
       box-shadow: 0 12px 28px rgba(178, 110, 140, .22);
     }
     #board { display: block; width: min(528px, calc(100vw - 300px)); height: auto; cursor: pointer; }
+    #gboard { display: block; width: min(560px, calc(100vw - 300px)); height: auto; cursor: pointer; }
 
     .xq-side { width: 300px; display: flex; flex-direction: column; gap: 14px; }
     .panel {
@@ -128,7 +129,7 @@
       .side-nav__home { margin-left: auto; }
       .xq-main { flex-direction: column; align-items: center; }
       .xq-side { width: min(528px, calc(100vw - 28px)); }
-      #board { width: min(528px, calc(100vw - 28px)); }
+      #board, #gboard { width: min(528px, calc(100vw - 28px)); }
     }
     @media (prefers-reduced-motion: reduce) {
       .side-nav__item, .btns button { transition: none !important; }
@@ -182,11 +183,44 @@
       </div>
     </section>
 
+    <!-- ============ 五子棋 ============ -->
+    <section id="stageGomoku" style="display: none;">
+      <header class="xq-header">
+        <h1 class="xq-title">五子棋 <span>✿</span></h1>
+        <p class="xq-sub">小圣正在和你对弈 ✿</p>
+      </header>
+      <div class="xq-main">
+        <div class="xq-board-wrap">
+          <canvas id="gboard" width="620" height="620"></canvas>
+        </div>
+        <aside class="xq-side">
+          <div class="panel">
+            <div id="gstatus">轮到你落子</div>
+          </div>
+          <div class="panel">
+            <div class="ctl-row">
+              <label>执子
+                <select id="gsideSel">
+                  <option value="1" selected>黑（先手）</option>
+                  <option value="2">白（后手）</option>
+                </select>
+              </label>
+            </div>
+            <div class="btns">
+              <button id="gundoBtn" type="button">悔棋</button>
+              <button id="gresetBtn" type="button" class="ghost">重开</button>
+              <button id="gresignBtn" type="button" class="ghost">认输</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
     <!-- ============ 在建占位 ============ -->
     <section id="stageWip" style="display: none;">
       <div class="wip-card">
-        <div class="wip-card__icon" id="wipIcon">⚫</div>
-        <h3 id="wipName">五子棋</h3>
+        <div class="wip-card__icon" id="wipIcon">◯</div>
+        <h3 id="wipName">围棋</h3>
         <p>在做了在做了 🚧<br />先去象棋那边和小圣过两招吧 ✿</p>
       </div>
     </section>
@@ -991,6 +1025,7 @@
       /* ---------- 左侧导航：就地切换棋局 ---------- */
       var navBtns = document.querySelectorAll('.side-nav__item[data-game]');
       var xqSec = document.getElementById('stageXiangqi');
+      var gomokuSec = document.getElementById('stageGomoku');
       var wipSec = document.getElementById('stageWip');
       var wipIcon = document.getElementById('wipIcon');
       var wipName = document.getElementById('wipName');
@@ -998,15 +1033,10 @@
         b.addEventListener('click', function () {
           navBtns.forEach(function (x) { x.classList.toggle('is-active', x === b); });
           var g = b.getAttribute('data-game');
-          if (g === 'xiangqi') {
-            wipSec.style.display = 'none';
-            xqSec.style.display = '';
-          } else {
-            xqSec.style.display = 'none';
-            wipSec.style.display = '';
-            wipIcon.textContent = g === 'gomoku' ? '⚫' : '◯';
-            wipName.textContent = g === 'gomoku' ? '五子棋' : '围棋';
-          }
+          xqSec.style.display = g === 'xiangqi' ? '' : 'none';
+          gomokuSec.style.display = g === 'gomoku' ? '' : 'none';
+          wipSec.style.display = g === 'go' ? '' : 'none';
+          if (g === 'go') { wipIcon.textContent = '◯'; wipName.textContent = '围棋'; }
         });
       });
 
@@ -1018,6 +1048,313 @@
         setupSources.push({ ch: CHARS[sp], color: E.isRed(sp) ? RED : BLACK, key: sp, fx: canvas.width - 26, fy: TRAY_TOP + 26 });
       }
       init(1, setupSources);
+    })();
+  </script>
+
+  <script>
+    /* ================================================================
+       五子棋（15×15 人机对战）：你执黑/白可选，小圣对家
+       AI = 单步启发式（攻其一点 + 防其一点，活四冲四活三模式分）
+       ================================================================ */
+    (function () {
+      'use strict';
+
+      var canvas = document.getElementById('gboard');
+      var ctx = canvas.getContext('2d');
+      var N = 15, CELL = 40, GO = 30;          // 30 + 14*40 = 590，居中留边
+      var EMPTY = 0, BLACK = 1, WHITE = 2;
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      var gb, gturn, gplayer, gai, ghist, gLast, gover, ganim, gWinLine;
+
+      var statusEl = document.getElementById('gstatus');
+      var sideSel = document.getElementById('gsideSel');
+      var undoBtn = document.getElementById('gundoBtn');
+      var resetBtn = document.getElementById('gresetBtn');
+      var resignBtn = document.getElementById('gresignBtn');
+
+      function ginit(side) {
+        gb = [];
+        for (var y = 0; y < N; y++) { gb.push(new Array(N).fill(EMPTY)); }
+        gturn = BLACK;
+        gplayer = side;
+        gai = side === BLACK ? WHITE : BLACK;
+        ghist = [];
+        gLast = null;
+        gover = false;
+        ganim = null;
+        gWinLine = null;
+        undoBtn.disabled = true;
+        render();
+        updateStatus();
+        if (gturn === gai) gaiTurn();
+      }
+
+      /* ---------- 绘制 ---------- */
+      function gp(x) { return GO + x * CELL; }
+      function render() {
+        ctx.fillStyle = '#f9e7c3';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = '#8a6a4a';
+        ctx.lineWidth = 1;
+        var i;
+        for (i = 0; i < N; i++) {
+          ctx.beginPath(); ctx.moveTo(gp(0), gp(i)); ctx.lineTo(gp(N - 1), gp(i)); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(gp(i), gp(0)); ctx.lineTo(gp(i), gp(N - 1)); ctx.stroke();
+        }
+        ctx.lineWidth = 3;
+        ctx.strokeRect(gp(0) - 4, gp(0) - 4, CELL * (N - 1) + 8, CELL * (N - 1) + 8);
+        /* 星位 */
+        ctx.fillStyle = '#8a6a4a';
+        [[3, 3], [3, 11], [11, 3], [11, 11], [7, 7]].forEach(function (s) {
+          ctx.beginPath(); ctx.arc(gp(s[0]), gp(s[1]), 4, 0, Math.PI * 2); ctx.fill();
+        });
+        /* 棋子 */
+        for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+          var p = gb[y][x];
+          if (p === EMPTY) continue;
+          if (ganim && ganim.x === x && ganim.y === y) continue;   // 落子动画单独画
+          drawStone(gp(x), gp(y), p, 1);
+        }
+        if (ganim) {
+          var k = Math.max(0, Math.min(1, ganim.k));
+          var s = 1 - Math.pow(1 - k, 3);
+          drawStone(gp(ganim.x), gp(ganim.y), ganim.color, 0.3 + 0.7 * s);
+        }
+        /* 最后一手标记 */
+        if (gLast) {
+          ctx.fillStyle = 'rgba(236, 111, 156, .9)';
+          ctx.beginPath(); ctx.arc(gp(gLast.x), gp(gLast.y), 5, 0, Math.PI * 2); ctx.fill();
+        }
+        /* 五连胜子高亮圈 */
+        if (gWinLine) {
+          ctx.strokeStyle = 'rgba(217, 79, 130, .9)';
+          ctx.lineWidth = 3;
+          gWinLine.forEach(function (c) {
+            ctx.beginPath(); ctx.arc(gp(c.x), gp(c.y), 20, 0, Math.PI * 2); ctx.stroke();
+          });
+          ctx.lineWidth = 1;
+        }
+      }
+
+      function drawStone(cx, cy, color, scale) {
+        var r = 17 * scale;
+        ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        if (color === BLACK) {
+          var g = ctx.createRadialGradient(cx - r / 3, cy - r / 3, r / 6, cx, cy, r);
+          g.addColorStop(0, '#666'); g.addColorStop(1, '#1a1a1a');
+          ctx.fillStyle = g;
+        } else {
+          ctx.fillStyle = '#fdf8ec';
+        }
+        ctx.fill();
+        ctx.strokeStyle = color === BLACK ? '#000' : '#c9b393';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      }
+
+      /* ---------- 落子动画（缩放弹入，rAF + setTimeout 兜底） ---------- */
+      function playStone(x, y, color, done) {
+        var finished = false;
+        function finish() {
+          if (finished) return;
+          finished = true;
+          ganim = null;
+          render();
+          done();
+        }
+        if (reduceMotion) { finish(); return; }
+        ganim = { x: x, y: y, color: color, t0: performance.now(), dur: 150, k: 0 };
+        setTimeout(finish, ganim.dur + 60);
+        requestAnimationFrame(function fr(t) {
+          if (finished || !ganim) return;
+          ganim.k = (t - ganim.t0) / ganim.dur;
+          if (ganim.k >= 1) { finish(); return; }
+          render();
+          requestAnimationFrame(fr);
+        });
+      }
+
+      /* ---------- 胜负判定：返回五连坐标数组或 null ---------- */
+      function winLine(x, y, color) {
+        var dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+        for (var d = 0; d < 4; d++) {
+          var dx = dirs[d][0], dy = dirs[d][1];
+          var cells = [{ x: x, y: y }];
+          var i;
+          for (i = 1; i < 5; i++) {
+            var nx = x + dx * i, ny = y + dy * i;
+            if (nx < 0 || nx >= N || ny < 0 || ny >= N || gb[ny][nx] !== color) break;
+            cells.push({ x: nx, y: ny });
+          }
+          for (i = 1; i < 5; i++) {
+            nx = x - dx * i; ny = y - dy * i;
+            if (nx < 0 || nx >= N || ny < 0 || ny >= N || gb[ny][nx] !== color) break;
+            cells.push({ x: nx, y: ny });
+          }
+          if (cells.length >= 5) return cells;
+        }
+        return null;
+      }
+
+      /* ---------- AI：单步启发式 ---------- */
+      function candidates() {
+        var out = [], any = false;
+        var y, x, yy, xx;
+        for (y = 0; y < N; y++) for (x = 0; x < N; x++) if (gb[y][x] !== EMPTY) any = true;
+        if (!any) return [{ x: 7, y: 7 }];
+        for (y = 0; y < N; y++) for (x = 0; x < N; x++) {
+          if (gb[y][x] !== EMPTY) continue;
+          var near = false;
+          for (yy = Math.max(0, y - 2); yy <= Math.min(N - 1, y + 2) && !near; yy++)
+            for (xx = Math.max(0, x - 2); xx <= Math.min(N - 1, x + 2); xx++)
+              if (gb[yy][xx] !== EMPTY) { near = true; break; }
+          if (near) out.push({ x: x, y: y });
+        }
+        return out;
+      }
+      function patternScore(count, open) {
+        if (count >= 5) return 10000000;
+        if (count === 4) return open === 2 ? 1000000 : (open === 1 ? 100000 : 0);
+        if (count === 3) return open === 2 ? 50000 : (open === 1 ? 2000 : 0);
+        if (count === 2) return open === 2 ? 5000 : (open === 1 ? 500 : 0);
+        return open === 2 ? 300 : (open === 1 ? 50 : 0);
+      }
+      function evalPoint(x, y, color) {
+        var total = 0;
+        var dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+        for (var d = 0; d < 4; d++) {
+          var dx = dirs[d][0], dy = dirs[d][1];
+          var count = 1, open = 0, i, nx, ny;
+          for (i = 1; i < 5; i++) {
+            nx = x + dx * i; ny = y + dy * i;
+            if (nx < 0 || nx >= N || ny < 0 || ny >= N || gb[ny][nx] !== color) break;
+            count++;
+          }
+          if (nx >= 0 && nx < N && ny >= 0 && ny < N && gb[ny][nx] === EMPTY) open++;
+          for (i = 1; i < 5; i++) {
+            nx = x - dx * i; ny = y - dy * i;
+            if (nx < 0 || nx >= N || ny < 0 || ny >= N || gb[ny][nx] !== color) break;
+            count++;
+          }
+          if (nx >= 0 && nx < N && ny >= 0 && ny < N && gb[ny][nx] === EMPTY) open++;
+          total += patternScore(count, open);
+        }
+        return total;
+      }
+      function bestMove() {
+        var cands = candidates();
+        var best = cands[0], bestScore = -Infinity;
+        for (var i = 0; i < cands.length; i++) {
+          var c = cands[i];
+          var atk = evalPoint(c.x, c.y, gai);
+          var def = evalPoint(c.x, c.y, gplayer);
+          var s = atk * 1.05 + def + Math.random() * 8;
+          if (s > bestScore) { bestScore = s; best = c; }
+        }
+        return best;
+      }
+
+      /* ---------- 流程 ---------- */
+      function place(x, y, color, done) {
+        gb[y][x] = color;
+        ghist.push({ x: x, y: y, color: color });
+        gLast = { x: x, y: y };
+        playStone(x, y, color, function () {
+          var wl = winLine(x, y, color);
+          if (wl) {
+            gWinLine = wl;
+            gover = true;
+            render();
+            setStatus(color === gplayer ? '五连！你赢了 ✿ 厉害！' : '五连！小圣赢了，再来一局？', color !== gplayer);
+            updateButtons();
+            return;
+          }
+          if (ghist.length >= N * N) {
+            gover = true;
+            setStatus('和棋（棋盘满了）', false);
+            updateButtons();
+            return;
+          }
+          gturn = color === BLACK ? WHITE : BLACK;
+          updateStatus();
+          updateButtons();
+          if (!gover && gturn === gai) gaiTurn();
+          if (done) done();
+        });
+      }
+
+      function gaiTurn() {
+        setStatus('小圣思考中…', false);
+        setTimeout(function () {
+          if (gover || gturn !== gai) return;
+          var m = bestMove();
+          place(m.x, m.y, gai);
+        }, 300);
+      }
+
+      function cellFromEvent(e) {
+        var r = canvas.getBoundingClientRect();
+        var mx = (e.clientX - r.left) * (canvas.width / r.width);
+        var my = (e.clientY - r.top) * (canvas.height / r.height);
+        var bx = Math.round((mx - GO) / CELL), by = Math.round((my - GO) / CELL);
+        if (bx < 0 || bx >= N || by < 0 || by >= N) return null;
+        return { x: bx, y: by };
+      }
+
+      canvas.addEventListener('click', function (e) {
+        if (gover || ganim || gturn !== gplayer) return;
+        var c = cellFromEvent(e);
+        if (!c || gb[c.y][c.x] !== EMPTY) return;
+        place(c.x, c.y, gplayer);
+      });
+
+      /* 悔棋：连撤两手（小圣的 + 你的） */
+      undoBtn.addEventListener('click', function () {
+        if (gover || ganim || !ghist.length || gturn !== gplayer) return;
+        var steps = 0;
+        while (ghist.length && steps < 2) {
+          var h = ghist.pop();
+          gb[h.y][h.x] = EMPTY;
+          steps++;
+          if (ghist.length && ghist[ghist.length - 1].color === gplayer) break;
+        }
+        gLast = ghist.length ? ghist[ghist.length - 1] : null;
+        gWinLine = null;
+        render();
+        updateStatus();
+        updateButtons();
+      });
+      resetBtn.addEventListener('click', function () {
+        if (ganim) return;
+        ginit(gplayer);
+      });
+      resignBtn.addEventListener('click', function () {
+        if (gover) return;
+        gover = true;
+        setStatus('认输了？没关系，再来一局 ✿', true);
+        updateButtons();
+      });
+      sideSel.addEventListener('change', function () {
+        if (ganim) { sideSel.value = String(gplayer); return; }
+        ginit(parseInt(sideSel.value, 10));
+      });
+
+      function updateStatus() {
+        if (gover) { updateButtons(); return; }
+        setStatus(gturn === gplayer ? '轮到你落子' : '小圣思考中…', false);
+        updateButtons();
+      }
+      function setStatus(text, isEnd) {
+        statusEl.textContent = text;
+        statusEl.className = isEnd ? 'check' : '';
+      }
+      function updateButtons() {
+        undoBtn.disabled = gover || !ghist.length || gturn !== gplayer;
+      }
+
+      ginit(BLACK);
     })();
   </script>
 </body>
