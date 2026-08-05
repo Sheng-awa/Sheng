@@ -33,6 +33,18 @@
       leaveTo("photos.html", "day");
     });
   });
+  Array.prototype.forEach.call(document.querySelectorAll('a[href="games.html"]'), function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      leaveTo("games.html", "dusk");
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('a[href="notes.html"]'), function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      leaveTo("notes.html", "blush");
+    });
+  });
 
   /* ---------- 主题切换（记忆偏好） ---------- */
   var root = document.documentElement;

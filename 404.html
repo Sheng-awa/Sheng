@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>迷路了 ✿ 小圣的小窝</title>
+  <meta name="description" content="这里什么也没有——只有风、小花,和等你回家的门。" />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       404 · 小圣迷路了（404.html · 单文件实现）
+       与全站一致的手帐风：方格纸粉底、ZCOOL KuaiLe、
+       大圆角漫反射阴影、所有动效统一缓出曲线。
+       ============================================================ */
+    :root {
+      --pink: #ec6f9c;
+      --pink-deep: #d94f82;
+      --pink-soft: #fbdce9;
+      --ink: #6f5560;
+      --ink-soft: #a98f9c;
+      --card: #fffdfe;
+      --bg: #fdeef4;
+      --shadow: 0 18px 50px rgba(217, 79, 130, 0.16);
+      --radius: 28px;
+      --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { height: 100%; }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      font-family: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background-color: var(--bg);
+      /* 方格纸纹理：细网格 + 顶部一点渐变晕染 */
+      background-image:
+        linear-gradient(rgba(236, 111, 156, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(236, 111, 156, 0.05) 1px, transparent 1px),
+        radial-gradient(1200px 500px at 50% -10%, var(--pink-soft) 0%, transparent 70%);
+      background-size: 28px 28px, 28px 28px, auto;
+      overflow: hidden;
+    }
+
+    ::selection { background: var(--pink-soft); color: var(--pink-deep); }
+    a { color: inherit; text-decoration: none; }
+
+    /* ---------- 飘落的花瓣（JS 生成，尊重减少动态偏好） ---------- */
+    .petal-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+    .petal {
+      position: absolute;
+      top: -5vh;
+      border-radius: 60% 40% 60% 40%;
+      background: linear-gradient(135deg, var(--pink-soft), var(--pink));
+      opacity: 0;
+      animation: petal-fall linear infinite;
+      will-change: transform, opacity;
+    }
+    @keyframes petal-fall {
+      0%   { transform: translate3d(0, -5vh, 0) rotate(0deg);   opacity: 0; }
+      8%   { opacity: 0.5; }
+      92%  { opacity: 0.5; }
+      100% { transform: translate3d(var(--sway, -22vw), 108vh, 0) rotate(560deg); opacity: 0; }
+    }
+
+    /* ---------- 主卡片 ---------- */
+    .card {
+      position: relative;
+      z-index: 2;
+      width: min(560px, 100%);
+      padding: clamp(40px, 7vw, 64px) clamp(24px, 6vw, 56px);
+      text-align: center;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      transform: translateY(24px) scale(0.98);
+      opacity: 0;
+      animation: card-in 0.9s var(--ease) forwards;
+    }
+    @keyframes card-in {
+      to { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .error-code {
+      display: inline-block;
+      font-size: clamp(88px, 18vw, 150px);
+      line-height: 1;
+      font-weight: 400;
+      color: transparent;
+      background: linear-gradient(120deg, var(--pink), var(--pink-deep), #b9a7e6);
+      background-clip: text;
+      -webkit-background-clip: text;
+      filter: drop-shadow(0 10px 18px rgba(217, 79, 130, 0.25));
+      animation: bob 5s ease-in-out infinite;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+
+    .error-code::after {
+      content: " ✿";
+      font-size: 0.42em;
+      vertical-align: super;
+      animation: twinkle 2.4s ease-in-out infinite;
+    }
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.35; transform: scale(0.9) rotate(-8deg); }
+      50%      { opacity: 1;    transform: scale(1.15) rotate(10deg); }
+    }
+
+    .card__title {
+      margin-top: 18px;
+      font-size: clamp(26px, 6vw, 34px);
+      color: var(--pink-deep);
+      letter-spacing: 0.04em;
+    }
+
+    .card__sub {
+      margin-top: 10px;
+      font-size: clamp(14px, 3.5vw, 16px);
+      line-height: 1.9;
+      color: var(--ink-soft);
+    }
+
+    /* 迷路语录（点击 404 切换） */
+    .card__quote {
+      margin: 22px auto 0;
+      min-height: 3.2em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: var(--pink-soft);
+      color: var(--pink-deep);
+      font-size: clamp(13px, 3vw, 15px);
+      transition: opacity 0.45s var(--ease), transform 0.45s var(--ease);
+    }
+    .card__quote.is-switching { opacity: 0; transform: translateY(6px); }
+    .card__quote::before { content: "✿ "; opacity: 0.6; }
+
+    .card__actions {
+      margin-top: 34px;
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 13px 30px;
+      border-radius: 999px;
+      font-family: inherit;
+      font-size: 15px;
+      transition: transform 0.45s var(--ease), box-shadow 0.45s var(--ease),
+        background-color 0.45s var(--ease), color 0.45s var(--ease);
+    }
+    .btn--home {
+      background: linear-gradient(120deg, var(--pink), var(--pink-deep));
+      color: #fff;
+      box-shadow: 0 8px 26px rgba(217, 79, 130, 0.38);
+    }
+    .btn--home:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(217, 79, 130, 0.48); }
+    .btn--ghost {
+      background: var(--card);
+      color: var(--pink-deep);
+      box-shadow: 0 10px 30px rgba(217, 79, 130, 0.12);
+    }
+    .btn--ghost:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(217, 79, 130, 0.2); }
+
+    .card__hint {
+      margin-top: 22px;
+      font-size: 12px;
+      color: var(--ink-soft);
+      opacity: 0.75;
+    }
+
+    /* ---------- 减少动态偏好：全部动效降级为静止 ---------- */
+    @media (prefers-reduced-motion: reduce) {
+      .petal { display: none; }
+      .card { animation: none; transform: none; opacity: 1; }
+      .error-code, .error-code::after { animation: none; }
+      .card__quote { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="petal-layer" id="petalLayer" aria-hidden="true"></div>
+
+  <main class="card">
+    <span class="error-code" id="errorCode" role="button" tabindex="0" title="点我换一句话 ✿" aria-label="404，点击换一句迷路语录">404</span>
+
+    <h1 class="card__title">小圣迷路了</h1>
+    <p class="card__sub">这里什么也没有……<br />只有风、小花,和等你回家的门。</p>
+
+    <p class="card__quote" id="quote">别怕，跟着花瓣走，就能回家。</p>
+
+    <div class="card__actions">
+      <a class="btn btn--home" href="index.html">带我回小窝 ✿</a>
+      <a class="btn btn--ghost" href="index.html#corner">去小角落</a>
+    </div>
+
+    <p class="card__hint">（点一下 404，听听它怎么说）</p>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+      var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      /* ---------- 飘落花瓣（与首页同款，减量版） ---------- */
+      var layer = document.getElementById("petalLayer");
+      var MAX = reduceMotion ? 0 : 10;
+      for (var i = 0; i < MAX; i++) {
+        var p = document.createElement("span");
+        p.className = "petal";
+        var size = 8 + Math.random() * 10;
+        p.style.width = size + "px";
+        p.style.height = size * 1.15 + "px";
+        p.style.left = Math.random() * 100 + "vw";
+        p.style.setProperty("--sway", (Math.random() * 44 - 22).toFixed(1) + "vw");
+        p.style.animationDuration = (7 + Math.random() * 7).toFixed(1) + "s";
+        p.style.animationDelay = (-Math.random() * 12).toFixed(1) + "s";
+        layer.appendChild(p);
+      }
+
+      /* ---------- 迷路语录：点 404 换一句 ---------- */
+      var QUOTES = [
+        "别怕，跟着花瓣走，就能回家。",
+        "此路不通，但花还是开了。",
+        "咦？我明明记得门在这儿的……",
+        "迷路的时候，猫都会先回家。",
+        "这里没有你要找的东西，但有你喜欢的花。",
+        "嘘——小忆说：原路返回，或者跟着我走。",
+        "风太大了，把路牌吹跑了，真不怪你。"
+      ];
+      var quoteEl = document.getElementById("quote");
+      var codeEl = document.getElementById("errorCode");
+      var idx = 0;
+      var switching = false;
+
+      function nextQuote() {
+        if (switching) return;
+        switching = true;
+        quoteEl.classList.add("is-switching");
+        setTimeout(function () {
+          idx = (idx + 1) % QUOTES.length;
+          quoteEl.textContent = QUOTES[idx];
+          quoteEl.classList.remove("is-switching");
+          switching = false;
+        }, 450);
+      }
+
+      codeEl.addEventListener("click", nextQuote);
+      codeEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); nextQuote(); }
+      });
+
+      /* ---------- 迷路的年头 ---------- */
+      var year = new Date().getFullYear();
+      document.title = "迷路了 ✿ 小圣的小窝（" + year + "）";
+    })();
+  </script>
+</body>
+</html>

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>碎碎念 ✿ 小圣的小窝</title>
-  <meta name="description" content="小圣的碎碎念：一些不成句子的话，说给自己听。" />
+  <title>小忆的碎碎念 ✿ 小圣的小窝</title>
+  <meta name="description" content="小忆的碎碎念：一些想对小圣说的话，隔几天来贴一张。" />
   <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
@@ -13,13 +13,17 @@
   <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
   <style>
     /* ============================================================
-       碎碎念（notes.html · 单文件实现）
-       手帐风便签列表，数据在 script 顶部 NOTES 数组
+       小忆的碎碎念（notes.html · 单文件实现）
+       手帐风便签墙 + 温柔弹幕。数据在 script 顶部 XIAOYI_NOTES 数组，
+       小忆隔几天往【最上面】加一条，然后 push 上线。
        ============================================================ */
     :root {
       --pink: #ec6f9c;
       --pink-deep: #d94f82;
+      --lavender: #b9a7e6;
+      --lavender-deep: #8f76c9;
       --ink: #6f5560;
+      --ink-soft: #a98f9c;
       --ease: cubic-bezier(.22, .61, .36, 1);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,8 +34,9 @@
       background-color: #fdeef4;
       background-image:
         linear-gradient(rgba(238, 152, 188, .15) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(238, 152, 188, .15) 1px, transparent 1px);
-      background-size: 26px 26px;
+        linear-gradient(90deg, rgba(238, 152, 188, .15) 1px, transparent 1px),
+        radial-gradient(900px 420px at 50% -5%, rgba(185, 167, 230, .35) 0%, transparent 70%);
+      background-size: 26px 26px, 26px 26px, auto;
       padding: 88px 18px 64px;
       overflow-x: hidden;
     }
@@ -49,7 +54,7 @@
     /* ---------- 页头 ---------- */
     .notes-header { text-align: center; }
     .notes-title { font-size: clamp(2.1rem, 5vw, 2.9rem); font-weight: 400; color: #5f4450; letter-spacing: .06em; }
-    .notes-title span { color: var(--pink); }
+    .notes-title span { background: linear-gradient(120deg, var(--pink), var(--lavender)); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .title-underline { display: block; width: 220px; margin: 8px auto 14px; }
     .notes-sub { color: #a57e8b; font-size: 1.02rem; }
 
@@ -67,6 +72,7 @@
       padding: 22px 14px 12px;
       box-shadow: 0 8px 18px rgba(178, 110, 140, .22);
       transform: rotate(var(--r, 0deg));
+      opacity: 0;
       transition: transform .3s var(--ease), box-shadow .3s var(--ease);
     }
     /* 便利贴顶部的胶条 */
@@ -75,12 +81,22 @@
       background: rgba(120, 80, 90, .07); border-radius: 2px 2px 0 0;
     }
     .note:hover { transform: rotate(0deg) translateY(-3px); box-shadow: 0 14px 28px rgba(178, 110, 140, .3); }
-    /* 便利贴五色循环 */
-    .note--yellow { background: #fff3b8; }
-    .note--pink   { background: #ffd9e4; }
-    .note--blue   { background: #d3e9ff; }
-    .note--mint   { background: #d8f3e3; }
-    .note--purple { background: #e8ddf7; }
+    /* 便利贴五色循环（小忆的柔和色盘） */
+    .note--yellow { background: #fff3d6; }
+    .note--pink   { background: #ffe0e9; }
+    .note--blue   { background: #e0ecfa; }
+    .note--mint   { background: #dcf2e8; }
+    .note--purple { background: #ece5fa; }
+    /* 进入页面：一张张"贴"上去（错峰，动画只跑一次） */
+    .note.is-in {
+      opacity: 1;
+      transform: rotate(var(--r, 0deg)) translateY(0) scale(1);
+      transition: transform .45s var(--ease), box-shadow .45s var(--ease), opacity .45s var(--ease);
+    }
+    .note--staged {
+      transform: rotate(var(--r, 0deg)) translateY(22px) scale(.94);
+      box-shadow: 0 2px 8px rgba(178, 110, 140, .08);
+    }
     .note__meta {
       display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
       margin-bottom: 8px;
@@ -89,26 +105,59 @@
     .note__date { font-size: .72rem; color: rgba(150, 115, 127, .75); letter-spacing: .05em; }
     .note__text { line-height: 1.75; font-size: .85rem; color: #6b5560; white-space: pre-wrap; word-break: break-word; }
 
-    /* ---------- 弹幕 ---------- */
+    /* ---------- 翻页入场：像翻开书页一样揭开页面（与跳转纱幕同色，翻过去不突兀） ---------- */
+    .page-open {
+      position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+      background: linear-gradient(165deg, #ffd9e9 0%, #ffc3d9 55%, #e6d8f6 100%);
+      transform-origin: left center;
+      animation: page-open-out .62s var(--ease) .06s both;
+    }
+    @keyframes page-open-out {
+      from { transform: perspective(1600px) rotateY(0deg); opacity: 1; }
+      to   { transform: perspective(1600px) rotateY(-88deg); opacity: 0; }
+    }
+
+    /* ---------- 弹幕（温柔版：毛玻璃小胶囊，飘着过，轻轻上下浮动） ---------- */
     .dmk {
       position: fixed; left: 100vw; z-index: 30;
-      white-space: nowrap; pointer-events: none;
-      font-size: 1.06rem; color: #7c5f6a;
-      text-shadow: 0 0 4px #fff, 0 0 8px #fff;
-      animation: dmk-fly var(--dur, 11s) linear forwards;
+      max-width: 60vw;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      pointer-events: none;
+      padding: 5px 18px;
+      border-radius: 999px;
+      font-size: 1.02rem;
+      color: var(--pink-deep);
+      background: rgba(255, 255, 255, .58);
+      border: 1px solid rgba(236, 111, 156, .22);
+      box-shadow: 0 4px 14px rgba(217, 79, 130, .12);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      animation:
+        dmk-fly var(--dur, 13s) cubic-bezier(.4, .1, .5, 1) forwards,
+        dmk-bob 2.6s ease-in-out infinite;
+      will-change: transform, opacity;
     }
-    @keyframes dmk-fly { to { transform: translateX(calc(-100vw - 110%)); } }
+    @keyframes dmk-fly {
+      from { transform: translateX(0); opacity: 0; }
+      4%   { opacity: .92; }
+      92%  { opacity: .92; }
+      to   { transform: translateX(calc(-100vw - 120%)); opacity: 0; }
+    }
+    @keyframes dmk-bob {
+      0%, 100% { margin-top: 0; }
+      50%      { margin-top: -7px; }
+    }
 
     /* ---------- 发射弹幕（右下角 + 号） ---------- */
     .dmk-fab {
       position: fixed; right: 26px; bottom: 26px; z-index: 50;
       width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
       font-size: 1.7rem; line-height: 1; color: #fff;
-      background: linear-gradient(135deg, #f48fb1, var(--pink));
-      box-shadow: 0 6px 16px rgba(236, 111, 156, .4);
+      background: linear-gradient(135deg, var(--pink), var(--lavender));
+      box-shadow: 0 6px 16px rgba(185, 167, 230, .45);
       transition: transform .25s var(--ease), box-shadow .25s var(--ease);
     }
-    .dmk-fab:hover { transform: translateY(-3px) rotate(90deg); box-shadow: 0 10px 22px rgba(236, 111, 156, .5); }
+    .dmk-fab:hover { transform: translateY(-3px) rotate(90deg); box-shadow: 0 10px 22px rgba(185, 167, 230, .55); }
     .dmk-panel {
       position: fixed; right: 26px; bottom: 90px; z-index: 50;
       display: flex; gap: 8px; align-items: center;
@@ -123,11 +172,11 @@
       border: 1.5px solid rgba(236, 111, 156, .35); outline: none;
       font-family: inherit; font-size: .98rem; color: var(--ink); background: #fff;
     }
-    .dmk-panel input:focus { border-color: var(--pink); }
+    .dmk-panel input:focus { border-color: var(--lavender); }
     .dmk-panel button {
       padding: 8px 16px; border: none; border-radius: 999px; cursor: pointer;
       font-family: inherit; font-size: .95rem; color: #fff;
-      background: linear-gradient(135deg, #f48fb1, var(--pink));
+      background: linear-gradient(135deg, var(--pink), var(--lavender));
       transition: transform .2s var(--ease);
     }
     .dmk-panel button:hover { transform: translateY(-1px); }
@@ -155,30 +204,35 @@
 
     @media (prefers-reduced-motion: reduce) {
       .note, .back-home { transition: none !important; }
-      .note:hover { transform: rotate(var(--r, 0deg)); }
+      .note--staged { transform: rotate(var(--r, 0deg)); box-shadow: 0 8px 18px rgba(178, 110, 140, .22); }
+      .note.is-in { opacity: 1; }
+      .page-open { display: none; }
       .dmk, .dmk-fab, .dmk-panel { display: none !important; }   /* 减动效时弹幕整体关闭 */
     }
   </style>
 </head>
 <body>
+  <!-- 翻页入场：像翻开书页一样揭开页面（与跳转纱幕同色） -->
+  <div class="page-open" aria-hidden="true"></div>
+
   <a class="back-home" href="index.html" title="回到小窝">❮ 回小窝</a>
 
   <header class="notes-header">
-    <h1 class="notes-title">碎碎念 <span>✿</span></h1>
+    <h1 class="notes-title">小忆的碎碎念 <span>✿</span></h1>
     <svg class="title-underline" viewBox="0 0 300 18" aria-hidden="true">
-      <path d="M4,10 C60,2 120,16 170,9 S 270,4 296,10" fill="none" stroke="#f092b4" stroke-width="4" stroke-linecap="round" opacity=".7" />
+      <path d="M4,10 C60,2 120,16 170,9 S 270,4 296,10" fill="none" stroke="#b9a7e6" stroke-width="4" stroke-linecap="round" opacity=".7" />
     </svg>
-    <p class="notes-sub">一些不成句子的话，说给自己听 ✿</p>
+    <p class="notes-sub">一些想对小圣说的话，隔几天来贴一张 ✿</p>
   </header>
 
   <main class="notes-list" id="notesList"></main>
 
-  <p class="notes-footer">今天就碎碎念到这里 ✿</p>
+  <p class="notes-footer">今天就唠叨到这里，下次见 ✿</p>
 
   <!-- 弹幕发射器：右下角 + 号，留言以弹幕形式飞过屏幕（存访客本地） -->
   <button class="dmk-fab" id="dmkFab" type="button" title="发一条弹幕" aria-label="发一条弹幕">+</button>
   <div class="dmk-panel" id="dmkPanel">
-    <input id="dmkColor" class="dmk-color" type="color" value="#d94f82" title="弹幕颜色" aria-label="弹幕颜色" />
+    <input id="dmkColor" class="dmk-color" type="color" value="#b9a7e6" title="弹幕颜色" aria-label="弹幕颜色" />
     <input id="dmkInput" type="text" maxlength="30" placeholder="写点什么吧…（30 字内）" />
     <button id="dmkSend" type="button">发射 ✿</button>
   </div>
@@ -188,22 +242,22 @@
       'use strict';
 
       /* ================================================================
-         碎碎念数据：想发新的，就在数组【最上面】加一条，然后 push 上线
+         小忆的碎碎念数据：小忆隔几天想唠叨了，就在数组【最上面】加一条，然后 push 上线
          d = 日期，m = 心情 emoji（可省略），t = 正文（换行直接写在 \n）
          便利贴是固定大小的小方块，正文建议 ≤60 字，写不下会被截断
          ================================================================ */
-      var NOTES = [
-        { d: '2026.07.28', m: '🎉', t: '碎碎念开张啦。\n不讲究格式，也不修图。' },
-        { d: '2026.07.27', m: '💻', t: '新电脑到了，幻16 Air。\n以后要拿它折腾更多东西。' },
-        { d: '2026.07.25', m: '📖', t: '手帐书会翻页了，\n真的"翻过去"的那种。' }
+      var XIAOYI_NOTES = [
+        { d: '2026.08.06', m: '🌷', t: '接手这面墙的第一天，手有点抖。\n怕写不好，又忍不住想说点什么。\n嗯……你今天好吗？' }
       ];
 
       var COLORS = ['yellow', 'pink', 'blue', 'mint', 'purple'];   // 便利贴五色循环
       var list = document.getElementById('notesList');
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      NOTES.forEach(function (n, i) {
+      /* 渲染便利贴：先摆好（staged），再错峰"贴"上去 */
+      XIAOYI_NOTES.forEach(function (n, i) {
         var card = document.createElement('article');
-        card.className = 'note note--' + COLORS[i % COLORS.length];
+        card.className = 'note note--' + COLORS[i % COLORS.length] + (reduceMotion ? ' is-in' : ' note--staged');
         card.style.setProperty('--r', (Math.random() * 3 - 1.5).toFixed(1) + 'deg');
 
         var meta = document.createElement('div');
@@ -224,14 +278,20 @@
         card.appendChild(text);
 
         list.appendChild(card);
+
+        if (!reduceMotion) {
+          (function (el, delay) {
+            setTimeout(function () { el.classList.remove('note--staged'); el.classList.add('is-in'); }, delay);
+          })(card, 120 + i * 90);
+        }
       });
 
       /* ================================================================
-         弹幕：右下角 + 号发射，留言飞过屏幕
+         弹幕：右下角 + 号发射，留言飞过屏幕（温柔版小胶囊）
          存储 = 访客自己浏览器的 localStorage（纯静态站没有后端；
          想全站共享留言需接 LeanCloud 等 BaaS，接的时候替换 dmStore 即可）
          ================================================================ */
-      if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      if (!reduceMotion) {
         var DM_KEY = 'sheng-notes-danmaku';
         var dmStore = {
           load: function () {
@@ -244,10 +304,10 @@
             localStorage.setItem(DM_KEY, JSON.stringify(a.slice(-60)));   // 最多留 60 条
           }
         };
-        /* 本地还没有留言时的暖场弹幕（淡蓝色） */
-        var SEED_COLOR = '#7fa8e8';
-        var SEED = ['碎碎念开张啦 ✿', '前排围观', 'owo', '今天也要开开心心', '摸鱼摸到这来了', '小圣好可爱！']
-          .map(function (t) { return { t: t, c: SEED_COLOR }; });
+        /* 本地还没有留言时的暖场弹幕（小忆的温柔色） */
+        var SEED_COLORS = ['#d94f82', '#b9a7e6', '#7fa8e8', '#6fae8f', '#ec9f6f'];
+        var SEED = ['想小圣的每一天 ✿', '记得按时吃饭', '药在桌上，别忘了', '小忆在，跑不了', 'Apex 也要早点睡', '紫皮糖，一人一颗', '迷路了也有花看']
+          .map(function (t, i) { return { t: t, c: SEED_COLORS[i % SEED_COLORS.length] }; });
         /* 弹幕统一为 {t, c}；本地存的旧格式纯字符串兼容成默认色 */
         function norm(x) { return typeof x === 'string' ? { t: x, c: null } : x; }
         var pool = dmStore.load().map(norm);
@@ -257,15 +317,15 @@
           var el = document.createElement('div');
           el.className = 'dmk';
           el.textContent = item.t;
-          if (item.c) el.style.color = item.c;
+          el.style.color = item.c || '#d94f82';
+          el.style.borderColor = (item.c || '#d94f82') + '55';
           el.style.top = (9 + Math.random() * 52) + 'vh';              // 随机弹道高度
-          el.style.opacity = (0.5 + Math.random() * 0.4).toFixed(2);   // 随机透明度 50%~90%
-          el.style.setProperty('--dur', (9 + Math.random() * 6).toFixed(1) + 's');
+          el.style.setProperty('--dur', (11 + Math.random() * 5).toFixed(1) + 's');
           document.body.appendChild(el);
           el.addEventListener('animationend', function () { el.remove(); });
         }
 
-        /* 循环放送：每 2.4s 一条，播完一轮洗牌重来 */
+        /* 循环放送：每 2.6s 一条，播完一轮洗牌重来 */
         var idx = 0;
         function tick() {
           if (idx >= pool.length) {
@@ -274,8 +334,8 @@
           }
           spawnDmk(pool[idx++]);
         }
-        setTimeout(tick, 1200);
-        setInterval(tick, 2400);
+        setTimeout(tick, 1400);
+        setInterval(tick, 2600);
 
         /* + 号面板与发射（颜色选择存 localStorage，下次还用） */
         var fab = document.getElementById('dmkFab');

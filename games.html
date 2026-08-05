@@ -56,6 +56,18 @@
     .side-nav__spacer { flex: 1; }
     .side-nav__home { color: var(--pink-deep); }
 
+    /* ---------- 翻页入场：像翻开书页一样揭开页面（与跳转纱幕同色，翻过去不突兀） ---------- */
+    .page-open {
+      position: fixed; inset: 0; z-index: 9999; pointer-events: none;
+      background: linear-gradient(165deg, #43365e 0%, #5d4c80 55%, #7f6a9e 100%);
+      transform-origin: left center;
+      animation: page-open-out .62s var(--ease) .06s both;
+    }
+    @keyframes page-open-out {
+      from { transform: perspective(1600px) rotateY(0deg); opacity: 1; }
+      to   { transform: perspective(1600px) rotateY(-88deg); opacity: 0; }
+    }
+
     .stage { max-width: 1100px; margin: 0 auto; }
 
     .xq-header { text-align: center; margin-bottom: 18px; }
@@ -133,11 +145,15 @@
       #gboard { width: min(720px, calc(100vw - 28px)); }
     }
     @media (prefers-reduced-motion: reduce) {
+      .page-open { display: none; }
       .side-nav__item, .btns button { transition: none !important; }
     }
   </style>
 </head>
 <body>
+  <!-- 翻页入场：像翻开书页一样揭开页面（与跳转纱幕同色） -->
+  <div class="page-open" aria-hidden="true"></div>
+
   <!-- 左侧导航：点一下就地切换棋局，不跳转 -->
   <nav class="side-nav">
     <div class="side-nav__logo">对弈 <span>✿</span></div>
@@ -1380,7 +1396,7 @@
         place(c.x, c.y, gplayer);
       });
 
-      /* 悔棋：连撤两手，棋子飞回棋盒 */
+      /* 悔棋：连撤两手（AI 应手 + 你上一手），棋子飞回棋盒 */
       undoBtn.addEventListener('click', function () {
         if (gover || ganim || gfly || !ghist.length || gturn !== gplayer) return;
         var cells = [];
@@ -1390,7 +1406,6 @@
           gb[h.y][h.x] = EMPTY;
           cells.push(h);
           steps++;
-          if (ghist.length && ghist[ghist.length - 1].color === gplayer) break;
         }
         gLast = ghist.length ? ghist[ghist.length - 1] : null;
         gWinLine = null;
