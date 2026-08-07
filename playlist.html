@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>喜欢的歌单 ♪ 小圣的小窝</title>
+  <meta name="description" content="小圣喜欢的歌，循环过很多遍的那些。" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       喜欢的歌单（playlist.html · 单文件实现）
+       长条列表：歌名 -- 歌手 ······ 播放按钮，逐行滑入动画。
+       点一行 = 跳去 music.html 用 ?song=ID 播放（走网易云 Meting）。
+       数据在 script 顶部 PLAY_SONGS 数组，加歌 = 在数组里加一行：
+       { id: 网易云歌曲ID, name: 歌名, artist: 歌手, note: 一句喜欢它的话 }
+       ============================================================ */
+    :root {
+      --pink: #ec6f9c;
+      --pink-deep: #d94f82;
+      --lavender: #b9a7e6;
+      --lavender-deep: #8f76c9;
+      --ink: #6f5560;
+      --ink-soft: #a98f9c;
+      --ease: cubic-bezier(.22, .61, .36, 1);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      font-family: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background-color: #fdeef4;
+      background-image:
+        linear-gradient(rgba(238, 152, 188, .15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(238, 152, 188, .15) 1px, transparent 1px),
+        radial-gradient(900px 420px at 50% -5%, rgba(185, 167, 230, .35) 0%, transparent 70%);
+      background-size: 26px 26px, 26px 26px, auto;
+      padding: 88px 18px 64px;
+      overflow-x: hidden;
+    }
+
+    /* ---------- 回小窝 / 回喜欢 ---------- */
+    .back-home {
+      position: fixed; top: 20px; left: 22px; z-index: 40;
+      padding: 9px 18px; background: #fff; color: var(--pink-deep);
+      border-radius: 999px; text-decoration: none; font-size: .98rem;
+      box-shadow: 0 3px 12px rgba(210, 110, 150, .25);
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+    .back-likes {
+      position: fixed; top: 20px; right: 22px; z-index: 40;
+      padding: 9px 18px; background: #fff; color: var(--lavender-deep);
+      border-radius: 999px; text-decoration: none; font-size: .98rem;
+      box-shadow: 0 3px 12px rgba(178, 110, 140, .25);
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+    .back-home:hover, .back-likes:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(210, 110, 150, .34); }
+
+    /* ---------- 页头 ---------- */
+    .pl-header { text-align: center; }
+    .pl-title { font-size: clamp(2.1rem, 5vw, 2.9rem); font-weight: 400; color: #5f4450; letter-spacing: .06em; }
+    .pl-title span { background: linear-gradient(120deg, var(--pink), var(--lavender)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .title-underline { display: block; width: 220px; margin: 8px auto 14px; }
+    .pl-sub { color: #a57e8b; font-size: 1.02rem; }
+
+    /* ---------- 歌单长条列表 ---------- */
+    .pl-list {
+      max-width: 680px; margin: 40px auto 0;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .song-row {
+      position: relative;
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 18px;
+      background: #fff;
+      border: 2px solid rgba(236, 111, 156, .18);
+      border-radius: 16px;
+      cursor: pointer;
+      box-shadow: 0 5px 16px rgba(178, 110, 140, .12);
+      transform: translateX(-28px);
+      opacity: 0;
+      transition: transform .5s var(--ease), box-shadow .3s var(--ease), border-color .3s var(--ease), opacity .5s var(--ease);
+    }
+    .song-row.is-in {
+      transform: translateX(0);
+      opacity: 1;
+    }
+    .song-row:hover { border-color: var(--pink); box-shadow: 0 12px 26px rgba(178, 110, 140, .24); }
+    .song-row__name {
+      font-size: 1.08rem; color: #5f4450;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex-shrink: 1; min-width: 0;
+    }
+    .song-row__dash { color: var(--pink); flex-shrink: 0; opacity: .8; }
+    .song-row__artist {
+      font-size: .9rem; color: var(--ink-soft);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      flex-shrink: 1; min-width: 0;
+    }
+    .song-row__dots {
+      flex: 1; text-align: right; overflow: hidden;
+      color: rgba(185, 167, 230, .6);
+      letter-spacing: 2px; white-space: nowrap;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 30%, #000);
+      mask-image: linear-gradient(90deg, transparent, #000 30%, #000);
+    }
+    .song-row__note {
+      position: absolute; left: 18px; top: calc(100% + 2px);
+      font-size: .76rem; color: #b39aa6;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: calc(100% - 120px);
+      pointer-events: none;
+    }
+    .song-row__play {
+      flex-shrink: 0;
+      width: 38px; height: 38px; border: none; border-radius: 50%;
+      background: linear-gradient(135deg, var(--pink), var(--lavender));
+      color: #fff; font-size: .95rem; line-height: 1; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(185, 167, 230, .4);
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+    }
+    .song-row__play:hover { transform: scale(1.12); box-shadow: 0 6px 18px rgba(185, 167, 230, .55); }
+
+    .pl-footer { text-align: center; color: #c09aa6; margin-top: 56px; font-size: .95rem; }
+
+    @media (max-width: 600px) {
+      body { padding: 84px 12px 48px; }
+      .song-row { padding: 12px 14px; gap: 8px; }
+      .song-row__name { font-size: .98rem; }
+      .song-row__dots { display: none; }
+      .song-row__artist { font-size: .84rem; }
+      .song-row__note { left: 14px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .song-row { transition: none !important; opacity: 1; transform: none; }
+    }
+
+    /* ---------- 页面转场纱幕：进入时粉纱淡出（与全站一致） ---------- */
+    .page-veil {
+      position: fixed; inset: 0; z-index: 9999;
+      pointer-events: none; opacity: 0; transition: opacity 0.38s ease;
+    }
+    .page-veil--blush { background: linear-gradient(165deg, #ffd9e9 0%, #ffc3d9 55%, #e6d8f6 100%); }
+    .page-veil--enter { animation: page-veil-out 0.6s ease 0.08s both; }
+    @keyframes page-veil-out {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .page-veil { transition: none; }
+      .page-veil--enter { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 页面转场纱幕：进入时粉纱淡出 -->
+  <div class="page-veil page-veil--blush page-veil--enter" aria-hidden="true"></div>
+
+  <a class="back-home" href="index.html" title="回到小窝">❮ 回小窝</a>
+  <a class="back-likes" href="index.html#likes" title="回到喜欢">❤ 喜欢</a>
+
+  <header class="pl-header">
+    <h1 class="pl-title">喜欢的歌单 <span>♪</span></h1>
+    <svg class="title-underline" viewBox="0 0 300 18" aria-hidden="true">
+      <path d="M4,10 C60,2 120,16 170,9 S 270,4 296,10" fill="none" stroke="#b9a7e6" stroke-width="4" stroke-linecap="round" opacity=".7" />
+    </svg>
+    <p class="pl-sub">点一行就去音乐页开唱 ♪</p>
+  </header>
+
+  <main class="pl-list" id="plList"></main>
+
+  <p class="pl-footer">今天也想听你喜欢的歌 ✿</p>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* ================================================================
+         喜欢的歌单数据：和 music.js 的 LIKED_SONGS 保持一致。
+         点击一行 = 跳去 music.html?local=编号，由播放器加载并定位到那首歌。
+         ================================================================ */
+      var PLAY_SONGS = [
+        { name: '拼接乌托邦', artist: 'Ciyo / 见过夏天P / 乌托邦P', note: '拼起来的乌托邦，也很好听 ✿' },
+        { name: 'death bed (coffee for your head)', artist: 'Powfu / beabadoobee', note: '适合一个人慢悠悠听' },
+        { name: '参考答案：略', artist: 'wukino / 诗岸', note: '题目有参考答案，人生不抄答案' }
+      ];
+
+      var listEl = document.getElementById('plList');
+
+      function esc(t) {
+        return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function render() {
+        listEl.innerHTML = '';
+        PLAY_SONGS.forEach(function (s, i) {
+          var row = document.createElement('div');
+          row.className = 'song-row';
+          row.setAttribute('role', 'link');
+          row.setAttribute('tabindex', '0');
+          row.setAttribute('aria-label', '播放 ' + s.name);
+          row.innerHTML =
+            '<span class="song-row__name">' + esc(s.name) + '</span>' +
+            '<span class="song-row__dash">--</span>' +
+            '<span class="song-row__artist">' + esc(s.artist) + '</span>' +
+            '<span class="song-row__dots">································</span>' +
+            (s.note ? '<span class="song-row__note">' + esc(s.note) + '</span>' : '') +
+            '<button class="song-row__play" type="button" aria-label="播放">▶</button>';
+          var playBtn = row.querySelector('.song-row__play');
+          playBtn.addEventListener('click', function (e) { e.stopPropagation(); go(i); });
+          row.addEventListener('click', function () { go(i); });
+          row.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(i); }
+          });
+          listEl.appendChild(row);
+        });
+        // 入场动画：一行行从左侧滑进来
+        var rows = listEl.querySelectorAll('.song-row');
+        (function stage(n) {
+          if (n >= rows.length) return;
+          rows[n].classList.add('is-in');
+          setTimeout(function () { stage(n + 1); }, 120);
+        })(0);
+      }
+
+      /* 点击一首歌：跳去音乐页定位播放 */
+      function go(i) {
+        location.href = 'music.html?local=' + i;
+      }
+
+      render();
+    })();
+  </script>
+</body>
+</html>

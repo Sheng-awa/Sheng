@@ -15,13 +15,11 @@
   var API = 'https://api.injahow.cn/meting/';   // Meting 公共 API（injahow 开源版）
   var DEFAULT_COVER = 'assets/img/好可爱.jpg';
 
-  /* 默认歌单：小圣自己的歌（想加歌就往这里加一行，lrc 可选） */
-  var LOCAL_TRACKS = [
-    { title: '拼接乌托邦',                        artist: 'Ciyo / 见过夏天P / 乌托邦P', src: 'assets/music/local/pinjie-wutuobang.mp3',      lrc: 'assets/music/local/pinjie-wutuobang.lrc' },
-    { title: 'Numb Little Bug',                   artist: 'Em Beihold',                 src: 'assets/music/local/numb-little-bug.mp3',        lrc: 'assets/music/local/numb-little-bug.lrc' },
-    { title: 'Shut up My Moms Calling',           artist: 'Hotel Ugly',                 src: 'assets/music/local/shut-up-my-moms-calling.mp3',lrc: 'assets/music/local/shut-up-my-moms-calling.lrc' },
-    { title: 'You Are Not Alone',                 artist: 'Michael Jackson',            src: 'assets/music/local/you-are-not-alone.mp3',      lrc: 'assets/music/local/you-are-not-alone.lrc' },
-    { title: 'death bed (coffee for your head)',  artist: 'Powfu / beabadoobee',        src: 'assets/music/local/death-bed.mp3',              lrc: 'assets/music/local/death-bed.lrc' }
+  /* 喜欢的歌曲：小圣放进 assets/music/local/ 的歌（加歌 = 在这里加一行，或让小忆来登记） */
+  var LIKED_SONGS = [
+    { title: '拼接乌托邦',                     artist: 'Ciyo / 见过夏天P / 乌托邦P', src: 'assets/music/local/pinjie-wutuobang.mp3', lrc: 'assets/music/local/pinjie-wutuobang.lrc' },
+    { title: 'death bed (coffee for your head)', artist: 'Powfu / beabadoobee',      src: 'assets/music/local/death-bed.mp3',         lrc: 'assets/music/local/death-bed.lrc' },
+    { title: '参考答案：略',                   artist: 'wukino / 诗岸',              src: 'assets/music/local/wukino,诗岸 - 参考答案：略.mp3', lrc: 'assets/music/local/wukino,诗岸 - 参考答案：略.lrc' }
   ];
 
   var MAX_LIST = 100;   // 歌单太长只显示前 100 首
@@ -40,11 +38,13 @@
   var btnPrev = document.getElementById('btnPrev');
   var btnNext = document.getElementById('btnNext');
   var volumeEl = document.getElementById('volume');
+  var volumePct = document.getElementById('volumePct');
   var listEl = document.getElementById('playerList');
   var listTitleEl = document.getElementById('listTitle');
   var plInput = document.getElementById('playlistInput');
   var plBtn = document.getElementById('playlistBtn');
   var plReset = document.getElementById('playlistReset');
+  var likedBtn = document.getElementById('likedBtn');
   var viz = document.getElementById('playerViz');
   if (!player || !viz) return;
 
@@ -321,10 +321,15 @@
     audio.currentTime = ratio * audio.duration;
   });
 
+  function syncVolumePct() {
+    if (volumePct) volumePct.textContent = Math.round(parseFloat(volumeEl.value) * 100) + '%';
+  }
+
   volumeEl.addEventListener('input', function () {
     var v = parseFloat(volumeEl.value);
     if (audioPlain) audioPlain.volume = v;
     if (audioFx) audioFx.volume = v;
+    syncVolumePct();
   });
 
   /* ---------- 网易云歌单 / 单曲 ---------- */
@@ -361,15 +366,15 @@
       });
   }
 
-  /* 默认歌单：小圣自己的歌 */
-  function loadLocal() {
-    tracks = LOCAL_TRACKS.map(function (t) {
+  /* 喜欢的歌曲：小圣放进 music/ 文件夹的歌 */
+  function loadLiked() {
+    tracks = LIKED_SONGS.map(function (t) {
       return { title: t.title, artist: t.artist, src: t.src, cover: DEFAULT_COVER, lrc: t.lrc || null };
     });
-    source = 'local';
-    store.set({ source: 'local' });
+    source = 'liked';
+    store.set({ source: 'liked' });
     plReset.hidden = true;
-    setListTitle('默认歌单');
+    setListTitle(tracks.length ? '喜欢的歌曲' : '喜欢的歌曲（还没有歌，把 mp3 放进 music/ 文件夹吧）');
     renderList();
   }
 
@@ -383,8 +388,12 @@
   });
   plReset.addEventListener('click', function () {
     plInput.value = '';
-    loadLocal();
+    loadLiked();
     load(0, false);
+  });
+  likedBtn.addEventListener('click', function () {
+    // 跳去「喜欢的歌单」页
+    location.href = 'playlist.html';
   });
 
   /* ---------- 频谱可视化（actx / analyser / freq 在顶部发声方案里声明） ---------- */
@@ -442,23 +451,43 @@
       else vctx.rect(x, h - bh, bw, bh);
       vctx.fill();
     }
+
     requestAnimationFrame(drawViz);
   }
   requestAnimationFrame(drawViz);
 
-  /* ---------- 启动：URL 带 ?playlist= 优先，其次恢复上次的音源；都不自动播放 ---------- */
-  var queryId = null;
-  try { queryId = new URLSearchParams(location.search).get('playlist'); } catch (e) {}
+  /* ---------- 启动：音量默认 10%，同步百分比显示 ---------- */
+  syncVolumePct();
+
+  /* ---------- 启动：URL 带 ?playlist= / ?song= / ?local= 优先，其次恢复上次；都不自动播放 ---------- */
+  var queryId = null, querySong = null, queryLocal = null;
+  try {
+    queryId = new URLSearchParams(location.search).get('playlist');
+    querySong = new URLSearchParams(location.search).get('song');
+    queryLocal = new URLSearchParams(location.search).get('local');
+  } catch (e) {}
   var parsed = queryId && parseInput(queryId);
+  var parsedSong = querySong && /^\d+$/.test(querySong) ? { type: 'song', id: querySong } : null;
   var saved = store.get();
   if (parsed) {
     plInput.value = parsed.id;
     loadNetease(parsed.type, parsed.id, false);
+  } else if (parsedSong) {
+    plInput.value = parsedSong.id;
+    loadNetease('song', parsedSong.id, false);
+  } else if (queryLocal !== null) {
+    // 从「喜欢的歌单」跳来：加载喜欢的歌曲、定位到那一首并自动播放
+    loadLiked();
+    var target = Math.min(parseInt(queryLocal, 10) || 0, Math.max(LIKED_SONGS.length - 1, 0));
+    load(target, true);
   } else if (saved && saved.source === 'netease' && saved.id) {
     plInput.value = saved.id;
     loadNetease(saved.type || 'playlist', saved.id, false);
+  } else if (saved && saved.source === 'liked') {
+    loadLiked();
+    load(0, false);   // 显示第一首信息，但不自动播放
   } else {
-    loadLocal();
+    loadLiked();
     load(0, false);   // 显示第一首信息，但不自动播放
   }
 })();

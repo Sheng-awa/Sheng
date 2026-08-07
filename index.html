@@ -43,6 +43,7 @@
         </button>
       </div>
       <nav class="nav__links">
+        <a href="#likes"><span class="nav__icon">❤</span><span class="nav__text">喜欢</span></a>
         <a href="#corner"><span class="nav__icon">✦</span><span class="nav__text">小角落</span></a>
         <a href="#contact"><span class="nav__icon">✉</span><span class="nav__text">联系</span></a>
         <a href="music.html"><span class="nav__icon">🎵</span><span class="nav__text">音乐</span></a>
@@ -81,9 +82,28 @@
           <a class="btn btn--ghost" href="#contact">来找我玩</a>
         </div>
       </div>
-      <a class="hero__scroll-hint" href="#corner" aria-label="向下滚动">
+      <a class="hero__scroll-hint" href="#likes" aria-label="向下滚动">
         <span></span>
       </a>
+    </section>
+
+    <!-- 喜欢（独立栏目，和小角落平级） -->
+    <section class="section" id="likes">
+      <div class="container">
+        <h2 class="section__title reveal">喜欢</h2>
+        <div class="corner__cards reveal" style="--d:.1s">
+          <a class="corner__entry" href="playlist.html">
+            <span class="corner__entry-icon">🎵</span>
+            <h3>喜欢的歌单</h3>
+            <p>循环过很多遍的歌，都在这儿，点一下就开唱 ♪</p>
+          </a>
+          <a class="corner__entry" href="photos.html">
+            <span class="corner__entry-icon">📷</span>
+            <h3>相册</h3>
+            <p>拍立得手帐，把喜欢的瞬间贴进来 ✿</p>
+          </a>
+        </div>
+      </div>
     </section>
 
     <!-- 小角落 -->
@@ -91,11 +111,6 @@
       <div class="container">
         <h2 class="section__title reveal">小角落</h2>
         <div class="corner__cards reveal" style="--d:.1s">
-          <a class="corner__entry" href="photos.html">
-            <span class="corner__entry-icon">📷</span>
-            <h3>相册</h3>
-            <p>拍立得手帐，把喜欢的瞬间贴进来 ✿</p>
-          </a>
           <a class="corner__entry" href="notes.html">
             <span class="corner__entry-icon">✏️</span>
             <h3>碎碎念</h3>
@@ -119,7 +134,7 @@
     </section>
 
     <!-- 联系 -->
-    <section class="section section--alt" id="contact">
+    <section class="section" id="contact">
       <div class="container">
         <h2 class="section__title reveal">来找我玩</h2>
         <div class="contact__list reveal" style="--d:.1s">

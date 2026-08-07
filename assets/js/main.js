@@ -45,6 +45,12 @@
       leaveTo("notes.html", "blush");
     });
   });
+  Array.prototype.forEach.call(document.querySelectorAll('a[href="playlist.html"]'), function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      leaveTo("playlist.html", "blush");
+    });
+  });
 
   /* ---------- 主题切换（记忆偏好） ---------- */
   var root = document.documentElement;
@@ -202,13 +208,13 @@
         vx: (Math.random() - 0.5) * 0.5,
         vy: (Math.random() - 0.5) * 0.5 - 0.15,
         life: 1,
-        decay: 0.018 + Math.random() * 0.02,
+        decay: 0.009 + Math.random() * 0.01,   // 衰减更慢 → 拖尾留得更久
         r: 1.8 + Math.random() * 3.2,
         color: TRAIL_COLORS[(Math.random() * TRAIL_COLORS.length) | 0]
       });
     }
     lastX = x; lastY = y;
-    if (trail.length > 220) trail.splice(0, trail.length - 220);
+    if (trail.length > 400) trail.splice(0, trail.length - 400);
   }, { passive: true });
 
   /* ---------- 飘雪 ---------- */
@@ -324,7 +330,8 @@
 
   var saved = null;
   try { saved = localStorage.getItem("sheng-nav-collapsed"); } catch (e) {}
-  if (saved === "1") document.body.classList.add("nav-collapsed");
+  // 默认收回侧边栏；只有用户明确展开过（存了 "0"）才保持展开
+  if (saved !== "0") document.body.classList.add("nav-collapsed");
 
   btn.addEventListener("click", function () {
     setCollapsed(!document.body.classList.contains("nav-collapsed"));
