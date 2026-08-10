@@ -186,6 +186,80 @@
     html[data-theme="dark"] .wip-card h3 { color: #e9c8d8; }
     html[data-theme="dark"] .wip-card p { color: #a28798; }
 
+    /* ---------- 国际象棋 ---------- */
+    .chess-board {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      width: min(528px, calc(100vw - 300px));
+      aspect-ratio: 1 / 1;
+      border: 3px solid #8a6a52;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .22);
+      background: #b58863;
+    }
+    .chess-square {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-width: 0;
+      min-height: 0;
+      font-size: clamp(26px, 4.6vw, 42px);
+      line-height: 1;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .chess-square.light { background: #f0d9b5; }
+    .chess-square.dark { background: #b58863; }
+    .chess-pw {
+      color: #fff;
+      text-shadow: 0 0 2px #333, 0 0 2px #333, 1px 1px 0 #333, -1px -1px 0 #333;
+    }
+    .chess-pb {
+      color: #232323;
+      text-shadow: 0 0 2px rgba(255, 255, 255, .3);
+    }
+    .chess-square.selected { box-shadow: inset 0 0 0 3px #f5c542; z-index: 2; }
+    .chess-square.move-hint::after {
+      content: '';
+      position: absolute;
+      width: 24%;
+      height: 24%;
+      border-radius: 50%;
+      background: rgba(40, 130, 70, .38);
+    }
+    .chess-square.capture-hint { box-shadow: inset 0 0 0 3px rgba(215, 60, 60, .6); }
+    .chess-square.just-moved { animation: chess-pop .35s var(--ease); }
+    @keyframes chess-pop { 50% { transform: scale(1.16); } }
+    .chess-square .coord {
+      position: absolute;
+      font-size: 10px;
+      line-height: 1;
+      pointer-events: none;
+    }
+    .chess-square.light .coord { color: rgba(70, 50, 35, .5); }
+    .chess-square.dark .coord { color: rgba(240, 225, 200, .55); }
+    .chess-square .coord--file { left: 3px; bottom: 1px; }
+    .chess-square .coord--rank { top: 1px; right: 3px; }
+    /* 摆棋动画：棋子从右下角错峰飞回原位 */
+    .chess-fly {
+      position: absolute;
+      width: 12.5%;
+      height: 12.5%;
+      display: grid;
+      place-items: center;
+      font-size: clamp(26px, 4.6vw, 42px);
+      line-height: 1;
+      pointer-events: none;
+      z-index: 3;
+      transform: translate(-50%, -50%);
+      transition: left .45s var(--ease), top .45s var(--ease);
+      will-change: left, top;
+    }
+
     /* ---------- 移动端：导航变顶栏 ---------- */
     @media (max-width: 920px) {
       body { padding: 128px 14px 48px; }
@@ -203,6 +277,7 @@
       .xq-side { width: min(528px, calc(100vw - 28px)); }
       #board { width: min(528px, calc(100vw - 28px)); }
       #gboard { width: min(720px, calc(100vw - 28px)); }
+      .chess-board { width: min(528px, calc(100vw - 28px)); }
     }
     @media (prefers-reduced-motion: reduce) {
       .page-open { display: none; }
@@ -219,6 +294,7 @@
     <div class="side-nav__logo">对弈 <span>✿</span></div>
     <button class="side-nav__item is-active" type="button" data-game="xiangqi"><i class="chess-ico">帅</i> 中国象棋</button>
     <button class="side-nav__item" type="button" data-game="gomoku">⚫ 五子棋</button>
+    <button class="side-nav__item" type="button" data-game="chess">♞ 国际象棋</button>
     <button class="side-nav__item" type="button" data-game="go">◯ 围棋</button>
     <div class="side-nav__spacer"></div>
     <a class="side-nav__item side-nav__home" href="index.html">❮ 回小窝</a>
@@ -287,6 +363,39 @@
               <button id="gundoBtn" type="button">悔棋</button>
               <button id="gresetBtn" type="button" class="ghost">重开</button>
               <button id="gresignBtn" type="button" class="ghost">认输</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ============ 国际象棋 ============ -->
+    <section id="stageChess" style="display: none;">
+      <header class="xq-header">
+        <h1 class="xq-title">国际象棋 <span>✿</span></h1>
+        <p class="xq-sub">小圣正在和你对弈 ✿</p>
+      </header>
+      <div class="xq-main">
+        <div class="xq-board-wrap chess-wrap">
+          <div class="chess-board" id="chessBoard"></div>
+        </div>
+        <aside class="xq-side">
+          <div class="panel">
+            <div id="cstatus">轮到你走棋</div>
+          </div>
+          <div class="panel">
+            <div class="ctl-row">
+              <label>执子
+                <select id="csideSel">
+                  <option value="w" selected>白（先手）</option>
+                  <option value="b">黑（后手）</option>
+                </select>
+              </label>
+            </div>
+            <div class="btns">
+              <button id="cundoBtn" type="button">悔棋</button>
+              <button id="cresetBtn" type="button" class="ghost">重开</button>
+              <button id="cresignBtn" type="button" class="ghost">认输</button>
             </div>
           </div>
         </aside>
@@ -1016,7 +1125,9 @@
 
       /* ---------- 悔棋（连撤两步，带回滑动画） ---------- */
       undoBtn.addEventListener('click', function () {
-        if (over || anim || capFly || resetFly || !history.length || turn !== playerSide) return;
+        if (anim || capFly || resetFly || !history.length) return;
+        if (!over && turn !== playerSide) return;
+        over = false;   // 绝杀后也允许悔棋：撤掉后恢复对局
         hint = null;
         undoOne(function () {
           if (turn !== playerSide && history.length) {
@@ -1044,6 +1155,7 @@
         noCapPly = 0;
         render();
         updateStatus();
+        updateButtons();
         if (!over && turn === aiSide) aiTurn();   // 执黑首回合悔棋后该小圣重新走
       }
 
@@ -1103,6 +1215,7 @@
       var navBtns = document.querySelectorAll('.side-nav__item[data-game]');
       var xqSec = document.getElementById('stageXiangqi');
       var gomokuSec = document.getElementById('stageGomoku');
+      var chessSec = document.getElementById('stageChess');
       var wipSec = document.getElementById('stageWip');
       var wipIcon = document.getElementById('wipIcon');
       var wipName = document.getElementById('wipName');
@@ -1112,6 +1225,7 @@
           var g = b.getAttribute('data-game');
           xqSec.style.display = g === 'xiangqi' ? '' : 'none';
           gomokuSec.style.display = g === 'gomoku' ? '' : 'none';
+          chessSec.style.display = g === 'chess' ? '' : 'none';
           wipSec.style.display = g === 'go' ? '' : 'none';
           if (g === 'go') { wipIcon.textContent = '◯'; wipName.textContent = '围棋'; }
         });
@@ -1458,7 +1572,10 @@
 
       /* 悔棋：连撤两手（AI 应手 + 你上一手），棋子飞回棋盒 */
       undoBtn.addEventListener('click', function () {
-        if (gover || ganim || gfly || !ghist.length || gturn !== gplayer) return;
+        if (ganim || gfly || !ghist.length) return;
+        if (!gover && gturn !== gplayer) return;
+        gover = false;   // 结束后也允许悔棋：撤掉后恢复对局
+        gWinLine = null;
         var cells = [];
         var steps = 0;
         while (ghist.length && steps < 2) {
@@ -1468,11 +1585,13 @@
           steps++;
         }
         gLast = ghist.length ? ghist[ghist.length - 1] : null;
-        gWinLine = null;
+        /* 黑方先手，按已落子数的奇偶推当前该谁走 */
+        gturn = (ghist.length % 2 === 0) ? BLACK : WHITE;
         render();
         flyToBox(cells, function () {
           updateStatus();
           updateButtons();
+          if (gturn === gai) gaiTurn();
         });
       });
       /* 重开：全场棋子各自飞回棋盒 */
@@ -1524,6 +1643,589 @@
       }
 
       ginit(BLACK);
+    })();
+  </script>
+  <script>
+    /* ================================================================
+       国际象棋（chess · 单文件实现）
+       引擎在 CHESS-START / CHESS-END 标记之间，无 DOM 依赖，
+       可提取到 node 验证（起始局面 perft 1/2/3 = 20/400/8902）。
+       规则：王车易位 / 吃过路兵 / 升变（自动变后）/ 将死 / 逼和。
+       ================================================================ */
+    (function () {
+      'use strict';
+
+      /*CHESS-START*/
+      var ChessEngine = (function () {
+        var VAL = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 0 };
+        var PST = {
+          P: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+          N: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30, -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30, -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+          B: [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10, -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10, -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+          R: [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+          Q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+          K: [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20]
+        };
+        var KNIGHT = [[1,2],[2,1],[2,-1],[1,-2],[-1,-2],[-2,-1],[-2,1],[-1,2]];
+        var KING = [[1,0],[1,1],[0,1],[-1,1],[-1,0],[-1,-1],[0,-1],[1,-1]];
+        var DIAG = [[1,1],[1,-1],[-1,1],[-1,-1]];
+        var ORTH = [[1,0],[-1,0],[0,1],[0,-1]];
+
+        function colorOf(p) { return p ? (p === p.toUpperCase() ? 'w' : 'b') : null; }
+        function inB(x, y) { return x >= 0 && x < 8 && y >= 0 && y < 8; }
+
+        function makeState() {
+          return {
+            board: [
+              ['r','n','b','q','k','b','n','r'],
+              ['p','p','p','p','p','p','p','p'],
+              [null,null,null,null,null,null,null,null],
+              [null,null,null,null,null,null,null,null],
+              [null,null,null,null,null,null,null,null],
+              [null,null,null,null,null,null,null,null],
+              ['P','P','P','P','P','P','P','P'],
+              ['R','N','B','Q','K','B','N','R']
+            ],
+            turn: 'w',
+            rights: { K: true, Q: true, k: true, q: true },
+            ep: null
+          };
+        }
+
+        function pstScore(p, x, y) {
+          var t = PST[p.toUpperCase()];
+          var i = p === p.toUpperCase() ? y * 8 + x : (7 - y) * 8 + x;
+          return t[i];
+        }
+
+        function pseudoMoves(s, x, y) {
+          var bd = s.board, p = bd[y][x], c = colorOf(p), out = [];
+          if (!p) return out;
+          function push(tx, ty, extra) { out.push({ x: tx, y: ty, extra: extra || null }); }
+
+          if (p === 'P' || p === 'p') {
+            var dir = p === 'P' ? -1 : 1;
+            var start = p === 'P' ? 6 : 1;
+            if (inB(x, y + dir) && !bd[y + dir][x]) {
+              push(x, y + dir);
+              if (y === start && !bd[y + 2 * dir][x]) push(x, y + 2 * dir);
+            }
+            [-1, 1].forEach(function (dx) {
+              var tx = x + dx, ty = y + dir;
+              if (!inB(tx, ty)) return;
+              var t = bd[ty][tx];
+              if (t && colorOf(t) !== c) push(tx, ty);
+              else if (s.ep && s.ep.x === tx && s.ep.y === ty) push(tx, ty, { ep: true });
+            });
+          } else if (p === 'N' || p === 'n') {
+            KNIGHT.forEach(function (d) {
+              var tx = x + d[0], ty = y + d[1];
+              if (inB(tx, ty) && (!bd[ty][tx] || colorOf(bd[ty][tx]) !== c)) push(tx, ty);
+            });
+          } else if (p === 'K' || p === 'k') {
+            KING.forEach(function (d) {
+              var tx = x + d[0], ty = y + d[1];
+              if (inB(tx, ty) && (!bd[ty][tx] || colorOf(bd[ty][tx]) !== c)) push(tx, ty);
+            });
+            if (p === 'K') {
+              if (s.rights.K && !bd[7][5] && !bd[7][6] && bd[7][7] === 'R' &&
+                  !isAttacked(bd, 4, 7, 'b') && !isAttacked(bd, 5, 7, 'b') && !isAttacked(bd, 6, 7, 'b')) push(6, 7, { castle: 'K' });
+              if (s.rights.Q && !bd[7][3] && !bd[7][2] && !bd[7][1] && bd[7][0] === 'R' &&
+                  !isAttacked(bd, 4, 7, 'b') && !isAttacked(bd, 3, 7, 'b') && !isAttacked(bd, 2, 7, 'b')) push(2, 7, { castle: 'Q' });
+            } else {
+              if (s.rights.k && !bd[0][5] && !bd[0][6] && bd[0][7] === 'r' &&
+                  !isAttacked(bd, 4, 0, 'w') && !isAttacked(bd, 5, 0, 'w') && !isAttacked(bd, 6, 0, 'w')) push(6, 0, { castle: 'k' });
+              if (s.rights.q && !bd[0][3] && !bd[0][2] && !bd[0][1] && bd[0][0] === 'r' &&
+                  !isAttacked(bd, 4, 0, 'w') && !isAttacked(bd, 3, 0, 'w') && !isAttacked(bd, 2, 0, 'w')) push(2, 0, { castle: 'q' });
+            }
+          } else {
+            var dirs = p === 'B' || p === 'b' ? DIAG : (p === 'R' || p === 'r' ? ORTH : DIAG.concat(ORTH));
+            dirs.forEach(function (d) {
+              var tx = x + d[0], ty = y + d[1];
+              while (inB(tx, ty)) {
+                var t = bd[ty][tx];
+                if (!t) { push(tx, ty); }
+                else { if (colorOf(t) !== c) push(tx, ty); break; }
+                tx += d[0]; ty += d[1];
+              }
+            });
+          }
+          return out;
+        }
+
+        function isAttacked(bd, x, y, by) {
+          var pc = by === 'w' ? 'P' : 'p';
+          var pd = by === 'w' ? 1 : -1;
+          if (inB(x - 1, y + pd) && bd[y + pd][x - 1] === pc) return true;
+          if (inB(x + 1, y + pd) && bd[y + pd][x + 1] === pc) return true;
+          var nc = by === 'w' ? 'N' : 'n', kc = by === 'w' ? 'K' : 'k';
+          for (var i = 0; i < KNIGHT.length; i++) {
+            var kx = KNIGHT[i][0], ky = KNIGHT[i][1];
+            if (inB(x + kx, y + ky) && bd[y + ky][x + kx] === nc) return true;
+          }
+          for (var j = 0; j < KING.length; j++) {
+            var gx = KING[j][0], gy = KING[j][1];
+            if (inB(x + gx, y + gy) && bd[y + gy][x + gx] === kc) return true;
+          }
+          function scan(dirs, types) {
+            for (var a = 0; a < dirs.length; a++) {
+              var sx = x + dirs[a][0], sy = y + dirs[a][1];
+              while (inB(sx, sy)) {
+                var t = bd[sy][sx];
+                if (t) {
+                  if (colorOf(t) === by && types.indexOf(t.toUpperCase()) >= 0) return true;
+                  break;
+                }
+                sx += dirs[a][0]; sy += dirs[a][1];
+              }
+            }
+            return false;
+          }
+          if (scan(DIAG, ['B', 'Q'])) return true;
+          if (scan(ORTH, ['R', 'Q'])) return true;
+          return false;
+        }
+
+        function findKing(bd, c) {
+          var k = c === 'w' ? 'K' : 'k';
+          for (var y = 0; y < 8; y++) for (var x = 0; x < 8; x++) if (bd[y][x] === k) return { x: x, y: y };
+          return null;
+        }
+
+        function inCheck(s, c) {
+          var k = findKing(s.board, c);
+          if (!k) return false;
+          return isAttacked(s.board, k.x, k.y, c === 'w' ? 'b' : 'w');
+        }
+
+        function makeMove(s, mv) {
+          var undo = {
+            board: s.board.map(function (r) { return r.slice(); }),
+            turn: s.turn,
+            rights: { K: s.rights.K, Q: s.rights.Q, k: s.rights.k, q: s.rights.q },
+            ep: s.ep
+          };
+          var p = s.board[mv.from.y][mv.from.x];
+          var target = s.board[mv.to.y][mv.to.x];
+          if (mv.extra && mv.extra.ep) s.board[mv.from.y][mv.to.x] = null;
+          s.board[mv.from.y][mv.from.x] = null;
+          s.board[mv.to.y][mv.to.x] = p;
+          if (mv.extra && mv.extra.castle) {
+            if (mv.extra.castle === 'K') { s.board[7][5] = 'R'; s.board[7][7] = null; }
+            if (mv.extra.castle === 'Q') { s.board[7][3] = 'R'; s.board[7][0] = null; }
+            if (mv.extra.castle === 'k') { s.board[0][5] = 'r'; s.board[0][7] = null; }
+            if (mv.extra.castle === 'q') { s.board[0][3] = 'r'; s.board[0][0] = null; }
+          }
+          if ((p === 'P' || p === 'p') && (mv.to.y === 0 || mv.to.y === 7)) {
+            s.board[mv.to.y][mv.to.x] = p === 'P' ? 'Q' : 'q';
+          }
+          if (p === 'K') { s.rights.K = false; s.rights.Q = false; }
+          if (p === 'k') { s.rights.k = false; s.rights.q = false; }
+          if (p === 'R' && mv.from.x === 7 && mv.from.y === 7) s.rights.K = false;
+          if (p === 'R' && mv.from.x === 0 && mv.from.y === 7) s.rights.Q = false;
+          if (p === 'r' && mv.from.x === 7 && mv.from.y === 0) s.rights.k = false;
+          if (p === 'r' && mv.from.x === 0 && mv.from.y === 0) s.rights.q = false;
+          if (target === 'R' && mv.to.x === 7 && mv.to.y === 7) s.rights.K = false;
+          if (target === 'R' && mv.to.x === 0 && mv.to.y === 7) s.rights.Q = false;
+          if (target === 'r' && mv.to.x === 7 && mv.to.y === 0) s.rights.k = false;
+          if (target === 'r' && mv.to.x === 0 && mv.to.y === 0) s.rights.q = false;
+          s.ep = null;
+          if ((p === 'P' || p === 'p') && Math.abs(mv.to.y - mv.from.y) === 2) {
+            s.ep = { x: mv.from.x, y: (mv.from.y + mv.to.y) / 2 };
+          }
+          s.turn = s.turn === 'w' ? 'b' : 'w';
+          return undo;
+        }
+
+        function unmakeMove(s, undo) {
+          s.board = undo.board;
+          s.turn = undo.turn;
+          s.rights = undo.rights;
+          s.ep = undo.ep;
+        }
+
+        function legalMoves(s) {
+          var c = s.turn, out = [];
+          for (var y = 0; y < 8; y++) for (var x = 0; x < 8; x++) {
+            var p = s.board[y][x];
+            if (!p || colorOf(p) !== c) continue;
+            var list = pseudoMoves(s, x, y);
+            for (var i = 0; i < list.length; i++) {
+              var t = list[i];
+              var mv = { from: { x: x, y: y }, to: { x: t.x, y: t.y }, extra: t.extra, p: p };
+              var undo = makeMove(s, mv);
+              var safe = !inCheck(s, c);
+              unmakeMove(s, undo);
+              if (safe) out.push(mv);
+            }
+          }
+          return out;
+        }
+
+        function status(s) {
+          var moves = legalMoves(s);
+          if (!moves.length) return inCheck(s, s.turn) ? 'checkmate' : 'stalemate';
+          return inCheck(s, s.turn) ? 'check' : 'playing';
+        }
+
+        function evaluate(s) {
+          var score = 0;
+          for (var y = 0; y < 8; y++) for (var x = 0; x < 8; x++) {
+            var p = s.board[y][x];
+            if (!p) continue;
+            var sign = p === p.toUpperCase() ? 1 : -1;
+            score += sign * (VAL[p.toUpperCase()] + pstScore(p, x, y));
+          }
+          return score;
+        }
+
+        function moveOrderScore(s, mv) {
+          var t = s.board[mv.to.y][mv.to.x];
+          if (!t) return 0;
+          return 100000 + VAL[t.toUpperCase()] * 10 - VAL[mv.p.toUpperCase()];
+        }
+
+        function orderMoves(s, moves) {
+          moves.sort(function (a, b) { return moveOrderScore(s, b) - moveOrderScore(s, a); });
+        }
+
+        function search(s, depth, alpha, beta) {
+          var moves = legalMoves(s);
+          if (!moves.length) return inCheck(s, s.turn) ? -100000 + (10 - depth) : 0;
+          if (depth === 0) return evaluate(s);
+          orderMoves(s, moves);
+          var best = -Infinity;
+          for (var i = 0; i < moves.length; i++) {
+            var undo = makeMove(s, moves[i]);
+            var val = -search(s, depth - 1, -beta, -alpha);
+            unmakeMove(s, undo);
+            if (val > best) best = val;
+            if (val > alpha) alpha = val;
+            if (alpha >= beta) break;
+          }
+          return best;
+        }
+
+        function bestMove(s, depth) {
+          var moves = legalMoves(s);
+          if (!moves.length) return null;
+          orderMoves(s, moves);
+          var scored = [];
+          var alpha = -Infinity;
+          for (var i = 0; i < moves.length; i++) {
+            var undo = makeMove(s, moves[i]);
+            var val = -search(s, depth - 1, -Infinity, -alpha);
+            unmakeMove(s, undo);
+            scored.push({ mv: moves[i], val: val });
+            if (val > alpha) alpha = val;
+          }
+          var best = -Infinity;
+          for (var j = 0; j < scored.length; j++) if (scored[j].val > best) best = scored[j].val;
+          var cands = [];
+          for (var k = 0; k < scored.length; k++) if (scored[k].val >= best - 30) cands.push(scored[k]);
+          return cands[Math.floor(Math.random() * cands.length)].mv;
+        }
+
+        return {
+          makeState: makeState,
+          legalMoves: legalMoves,
+          makeMove: makeMove,
+          unmakeMove: unmakeMove,
+          status: status,
+          inCheck: inCheck,
+          evaluate: evaluate,
+          bestMove: bestMove,
+          colorOf: colorOf
+        };
+      })();
+      /*CHESS-END*/
+
+      /* ---------- 界面 ---------- */
+      var boardEl = document.getElementById('chessBoard');
+      var cstatusEl = document.getElementById('cstatus');
+      var csideSel = document.getElementById('csideSel');
+      var cundoBtn = document.getElementById('cundoBtn');
+      var cresetBtn = document.getElementById('cresetBtn');
+      var cresignBtn = document.getElementById('cresignBtn');
+      if (!boardEl || !cstatusEl) return;
+
+      /* 全部用实心棋子，靠颜色区分黑白（白色带深色描边） */
+      var GLYPH = { K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟', k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+      var FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+
+      var gs = ChessEngine.makeState();
+      var playerColor = 'w';
+      var selected = null;
+      var legalCache = [];
+      var thinking = false;
+      var gameOver = false;
+      var gameOverText = '';
+      var history = [];
+      var lastMove = null;
+
+      function playerName() { return playerColor === 'w' ? '白方' : '黑方'; }
+      function opponentColor() { return playerColor === 'w' ? 'b' : 'w'; }
+
+      function refreshStatus() {
+        if (gameOver) { cstatusEl.textContent = gameOverText; return; }
+        var st = ChessEngine.status(gs);
+        if (st === 'checkmate') {
+          gameOver = true;
+          var winnerName = gs.turn === 'w' ? '黑方' : '白方';
+          gameOverText = winnerName === playerName() ? '将死，你赢了 🎉' : '将死，小圣赢了 ✿';
+        } else if (st === 'stalemate') {
+          gameOver = true;
+          gameOverText = '逼和（无子可动）';
+        } else if (st === 'check') {
+          cstatusEl.textContent = '将军！' + (gs.turn === playerColor ? ' 轮到你走棋' : ' 小圣正在思考…');
+          return;
+        } else {
+          cstatusEl.textContent = gs.turn === playerColor ? '轮到你走棋' : '小圣正在思考…';
+          return;
+        }
+        cstatusEl.textContent = gameOverText;
+      }
+
+      function buildSquare(x, y) {
+        var sq = document.createElement('div');
+        sq.className = 'chess-square ' + ((x + y) % 2 === 0 ? 'light' : 'dark');
+        sq.setAttribute('data-x', x);
+        sq.setAttribute('data-y', y);
+        if (y === 7) {
+          var f = document.createElement('span');
+          f.className = 'coord coord--file';
+          f.textContent = FILES[x];
+          sq.appendChild(f);
+        }
+        if (x === 0) {
+          var r = document.createElement('span');
+          r.className = 'coord coord--rank';
+          r.textContent = 8 - y;
+          sq.appendChild(r);
+        }
+        return sq;
+      }
+
+      function renderBoard() {
+        boardEl.innerHTML = '';
+        for (var y = 0; y < 8; y++) {
+          for (var x = 0; x < 8; x++) {
+            var sq = buildSquare(x, y);
+            var p = gs.board[y][x];
+            if (p) {
+              var span = document.createElement('span');
+              span.className = p === p.toUpperCase() ? 'chess-pw' : 'chess-pb';
+              span.textContent = GLYPH[p];
+              sq.appendChild(span);
+            }
+            if (selected && selected.x === x && selected.y === y) sq.classList.add('selected');
+            for (var i = 0; i < legalCache.length; i++) {
+              var m = legalCache[i];
+              if (m.to.x === x && m.to.y === y) {
+                sq.classList.add(gs.board[y][x] ? 'capture-hint' : 'move-hint');
+              }
+            }
+            if (lastMove &&
+                ((lastMove.from.x === x && lastMove.from.y === y) ||
+                 (lastMove.to.x === x && lastMove.to.y === y))) {
+              sq.classList.add('just-moved');
+            }
+            boardEl.appendChild(sq);
+          }
+        }
+      }
+
+      var placing = false;
+      var placeTimers = [];
+
+      function clearPlaceTimers() {
+        for (var i = 0; i < placeTimers.length; i++) clearTimeout(placeTimers[i]);
+        placeTimers = [];
+      }
+
+      function renderEmptyBoard() {
+        boardEl.innerHTML = '';
+        for (var y = 0; y < 8; y++) {
+          for (var x = 0; x < 8; x++) boardEl.appendChild(buildSquare(x, y));
+        }
+      }
+
+      /* 摆棋动画：棋子从右下角错峰飞回原位（参考中国象棋的飞回动画） */
+      function flyPiecesIn(done) {
+        clearPlaceTimers();
+        placing = true;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          placing = false;
+          renderBoard();
+          if (done) done();
+          return;
+        }
+        renderEmptyBoard();
+        var w = boardEl.clientWidth, h = boardEl.clientHeight;
+        var cell = w / 8;
+        var startX = w - cell * 0.55, startY = h - cell * 0.55;
+        var src = ChessEngine.makeState();
+        var list = [];
+        for (var y = 0; y < 8; y++) for (var x = 0; x < 8; x++) {
+          var p = src.board[y][x];
+          if (p) list.push({ p: p, x: x, y: y });
+        }
+        var doneCount = 0;
+        list.forEach(function (it, idx) {
+          placeTimers.push(setTimeout(function () {
+            var span = document.createElement('span');
+            span.className = 'chess-fly ' + (it.p === it.p.toUpperCase() ? 'chess-pw' : 'chess-pb');
+            span.textContent = GLYPH[it.p];
+            span.style.left = startX + 'px';
+            span.style.top = startY + 'px';
+            boardEl.appendChild(span);
+            void span.offsetWidth;
+            span.style.left = (it.x * cell + cell / 2) + 'px';
+            span.style.top = (it.y * cell + cell / 2) + 'px';
+            doneCount++;
+            if (doneCount === list.length) {
+              placeTimers.push(setTimeout(function () {
+                placing = false;
+                renderBoard();
+                if (done) done();
+              }, 480));
+            }
+          }, idx * 22));
+        });
+        if (!list.length) {
+          placing = false;
+          renderBoard();
+          if (done) done();
+        }
+      }
+
+      function select(x, y) {
+        selected = { x: x, y: y };
+        legalCache = [];
+        var all = ChessEngine.legalMoves(gs);
+        for (var i = 0; i < all.length; i++) {
+          if (all[i].from.x === x && all[i].from.y === y) legalCache.push(all[i]);
+        }
+        renderBoard();
+      }
+
+      function doMove(mv, color) {
+        var undo = ChessEngine.makeMove(gs, mv);
+        history.push({ mv: mv, color: color, undo: undo });
+        lastMove = mv;
+        selected = null;
+        legalCache = [];
+        renderBoard();
+        refreshStatus();
+      }
+
+      function maybeAiTurn() {
+        if (gameOver || thinking) return;
+        if (gs.turn === playerColor) return;
+        thinking = true;
+        refreshStatus();
+        setTimeout(function () {
+          var mv = ChessEngine.bestMove(gs, 3);
+          thinking = false;
+          if (mv) {
+            doMove(mv, opponentColor());
+            maybeAiTurn();
+          } else {
+            refreshStatus();
+          }
+        }, 420);
+      }
+
+      function resetGame() {
+        gs = ChessEngine.makeState();
+        selected = null;
+        legalCache = [];
+        thinking = false;
+        gameOver = false;
+        gameOverText = '';
+        history = [];
+        lastMove = null;
+        flyPiecesIn(function () {
+          refreshStatus();
+          if (playerColor === 'b') maybeAiTurn();
+        });
+      }
+
+      function sqFromEvent(e) {
+        var el = e.target;
+        while (el && el !== boardEl) {
+          if (el.classList && el.classList.contains('chess-square')) return el;
+          el = el.parentNode;
+        }
+        return null;
+      }
+
+      boardEl.addEventListener('click', function (e) {
+        if (placing || thinking || gameOver) return;
+        if (gs.turn !== playerColor) return;
+        var sq = sqFromEvent(e);
+        if (!sq) return;
+        var x = parseInt(sq.getAttribute('data-x'), 10);
+        var y = parseInt(sq.getAttribute('data-y'), 10);
+        var p = gs.board[y][x];
+        if (selected) {
+          var mv = null;
+          for (var i = 0; i < legalCache.length; i++) {
+            if (legalCache[i].to.x === x && legalCache[i].to.y === y) { mv = legalCache[i]; break; }
+          }
+          if (mv) {
+            doMove(mv, playerColor);
+            maybeAiTurn();
+            return;
+          }
+          if (p && ChessEngine.colorOf(p) === playerColor) { select(x, y); return; }
+          selected = null;
+          legalCache = [];
+          renderBoard();
+          return;
+        }
+        if (p && ChessEngine.colorOf(p) === playerColor) select(x, y);
+      });
+
+      cundoBtn.addEventListener('click', function () {
+        if (placing || thinking || !history.length) return;
+        gameOver = false;
+        gameOverText = '';
+        var last = history.pop();
+        ChessEngine.unmakeMove(gs, last.undo);
+        if (last.color !== playerColor) {
+          var prev = history[history.length - 1];
+          if (prev) {
+            ChessEngine.unmakeMove(gs, prev.undo);
+            history.pop();
+          }
+        }
+        selected = null;
+        legalCache = [];
+        lastMove = history.length ? history[history.length - 1].mv : null;
+        renderBoard();
+        refreshStatus();
+        maybeAiTurn();
+      });
+
+      cresetBtn.addEventListener('click', resetGame);
+
+      csideSel.addEventListener('change', function () {
+        playerColor = csideSel.value === 'b' ? 'b' : 'w';
+        resetGame();
+      });
+
+      cresignBtn.addEventListener('click', function () {
+        if (placing || gameOver) return;
+        gameOver = true;
+        gameOverText = '你认输了，小圣赢了 ✿';
+        cstatusEl.textContent = gameOverText;
+      });
+
+      flyPiecesIn(function () {
+        refreshStatus();
+        if (playerColor === 'b') maybeAiTurn();
+      });
     })();
   </script>
 </body>
