@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('sheng-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>喜欢的歌单 ♪ 小圣的小窝</title>
@@ -26,7 +34,17 @@
       --lavender-deep: #8f76c9;
       --ink: #6f5560;
       --ink-soft: #a98f9c;
+      --card-bg: #ffffff;
       --ease: cubic-bezier(.22, .61, .36, 1);
+    }
+    html[data-theme="dark"] {
+      --pink: #f28bb4;
+      --pink-deep: #ff9ec6;
+      --lavender: #a58fd6;
+      --lavender-deep: #c3aef0;
+      --ink: #e8d9e3;
+      --ink-soft: #b6a2b0;
+      --card-bg: #2f2633;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -42,30 +60,40 @@
       padding: 88px 18px 64px;
       overflow-x: hidden;
     }
+    html[data-theme="dark"] body {
+      background-color: #241b27;
+      background-image:
+        linear-gradient(rgba(242, 167, 195, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(242, 167, 195, .08) 1px, transparent 1px),
+        radial-gradient(900px 420px at 50% -5%, rgba(165, 143, 214, .22) 0%, transparent 70%);
+    }
 
     /* ---------- 回小窝 / 回喜欢 ---------- */
     .back-home {
       position: fixed; top: 20px; left: 22px; z-index: 40;
-      padding: 9px 18px; background: #fff; color: var(--pink-deep);
+      padding: 9px 18px; background: var(--card-bg); color: var(--pink-deep);
       border-radius: 999px; text-decoration: none; font-size: .98rem;
       box-shadow: 0 3px 12px rgba(210, 110, 150, .25);
       transition: transform .3s var(--ease), box-shadow .3s var(--ease);
     }
     .back-likes {
       position: fixed; top: 20px; right: 22px; z-index: 40;
-      padding: 9px 18px; background: #fff; color: var(--lavender-deep);
+      padding: 9px 18px; background: var(--card-bg); color: var(--lavender-deep);
       border-radius: 999px; text-decoration: none; font-size: .98rem;
       box-shadow: 0 3px 12px rgba(178, 110, 140, .25);
       transition: transform .3s var(--ease), box-shadow .3s var(--ease);
     }
     .back-home:hover, .back-likes:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(210, 110, 150, .34); }
 
+
     /* ---------- 页头 ---------- */
     .pl-header { text-align: center; }
     .pl-title { font-size: clamp(2.1rem, 5vw, 2.9rem); font-weight: 400; color: #5f4450; letter-spacing: .06em; }
+    html[data-theme="dark"] .pl-title { color: #e9c8d8; }
     .pl-title span { background: linear-gradient(120deg, var(--pink), var(--lavender)); -webkit-background-clip: text; background-clip: text; color: transparent; }
     .title-underline { display: block; width: 220px; margin: 8px auto 14px; }
     .pl-sub { color: #a57e8b; font-size: 1.02rem; }
+    html[data-theme="dark"] .pl-sub { color: #a28798; }
 
     /* ---------- 歌单长条列表 ---------- */
     .pl-list {
@@ -76,7 +104,7 @@
       position: relative;
       display: flex; align-items: center; gap: 12px;
       padding: 14px 18px;
-      background: #fff;
+      background: var(--card-bg);
       border: 2px solid rgba(236, 111, 156, .18);
       border-radius: 16px;
       cursor: pointer;
@@ -90,11 +118,13 @@
       opacity: 1;
     }
     .song-row:hover { border-color: var(--pink); box-shadow: 0 12px 26px rgba(178, 110, 140, .24); }
+    html[data-theme="dark"] .song-row { border-color: rgba(242, 167, 195, .26); }
     .song-row__name {
       font-size: 1.08rem; color: #5f4450;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       flex-shrink: 1; min-width: 0;
     }
+    html[data-theme="dark"] .song-row__name { color: #f2dce8; }
     .song-row__dash { color: var(--pink); flex-shrink: 0; opacity: .8; }
     .song-row__artist {
       font-size: .9rem; color: var(--ink-soft);
@@ -115,6 +145,7 @@
       max-width: calc(100% - 120px);
       pointer-events: none;
     }
+    html[data-theme="dark"] .song-row__note { color: #a28798; }
     .song-row__play {
       flex-shrink: 0;
       width: 38px; height: 38px; border: none; border-radius: 50%;
@@ -126,6 +157,7 @@
     .song-row__play:hover { transform: scale(1.12); box-shadow: 0 6px 18px rgba(185, 167, 230, .55); }
 
     .pl-footer { text-align: center; color: #c09aa6; margin-top: 56px; font-size: .95rem; }
+    html[data-theme="dark"] .pl-footer { color: #a28798; }
 
     @media (max-width: 600px) {
       body { padding: 84px 12px 48px; }
@@ -145,6 +177,7 @@
       pointer-events: none; opacity: 0; transition: opacity 0.38s ease;
     }
     .page-veil--blush { background: linear-gradient(165deg, #ffd9e9 0%, #ffc3d9 55%, #e6d8f6 100%); }
+    html[data-theme="dark"] .page-veil--blush { background: linear-gradient(165deg, #3a2440 0%, #32203a 55%, #251b33 100%); }
     .page-veil--enter { animation: page-veil-out 0.6s ease 0.08s both; }
     @keyframes page-veil-out {
       from { opacity: 1; }

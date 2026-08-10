@@ -520,12 +520,13 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
   background: linear-gradient(90deg, var(--accent), var(--lavender));
 }
 
-/* ---------- 小角落 / 喜欢（小卡，一行 5 个的密度，悬停展开介绍） ---------- */
+/* ---------- 小角落 / 喜欢（大卡：全屏一排最多 5 个，小屏一排最多 4 个，悬停展开介绍） ---------- */
 .corner__cards {
   display: grid;
-  grid-template-columns: repeat(5, auto);
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   justify-content: center;
-  gap: 18px;
+  justify-items: center;
+  gap: 20px;
   align-items: start;
 }
 
@@ -533,8 +534,10 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 .corner__entry {
   position: relative;
   display: block;
-  width: 150px;
-  padding: 22px 12px 16px;
+  width: 100%;
+  max-width: 230px;
+  min-height: 170px;
+  padding: 26px 16px 20px;
   background: var(--card);
   border: 2px solid var(--accent);
   border-radius: 18px;
@@ -546,8 +549,8 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
   transition: transform 0.45s var(--ease), box-shadow var(--speed) var(--ease), background-color var(--speed) var(--ease);
 }
 .corner__entry:hover { transform: translateY(-6px); box-shadow: var(--shadow-hover); z-index: 30; }
-.corner__entry-icon { display: block; font-size: 2rem; margin-bottom: 8px; }
-.corner__entry h3 { margin: 0; font-size: 1.02rem; color: var(--accent-deep); }
+.corner__entry-icon { display: block; font-size: 2.2rem; margin-bottom: 10px; }
+.corner__entry h3 { margin: 0; font-size: 1.08rem; color: var(--accent-deep); }
 /* 介绍：默认收起，悬停时从卡片下方半透明渐变往下舒展 */
 .corner__entry p {
   position: absolute;
@@ -583,8 +586,10 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 .corner__card {
   position: relative;
   display: block;
-  width: 150px;
-  padding: 22px 12px 16px;
+  width: 100%;
+  max-width: 230px;
+  min-height: 170px;
+  padding: 26px 16px 20px;
   background: var(--card);
   border: 2px dashed var(--accent);
   border-radius: 18px;
@@ -596,8 +601,8 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
   transition: background-color var(--speed) var(--ease), transform 0.45s var(--ease), box-shadow var(--speed) var(--ease);
 }
 .corner__card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); z-index: 30; }
-.corner__wip { font-size: 1.9rem; margin-bottom: 8px; }
-.corner__card h3 { margin: 0; font-size: 1.02rem; color: var(--accent-deep); }
+.corner__wip { font-size: 2.1rem; margin-bottom: 10px; }
+.corner__card h3 { margin: 0; font-size: 1.08rem; color: var(--accent-deep); }
 .corner__card p {
   position: absolute;
   top: calc(100% + 4px);
@@ -637,20 +642,33 @@ html[data-theme="dark"] .corner__card p {
 
 /* 窄屏：没有悬停，介绍直接常显，卡片自适应铺满 */
 @media (max-width: 900px) {
-  .corner__cards { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); justify-content: stretch; }
-  .corner__entry, .corner__card { width: auto; padding: 18px 14px 16px; }
+  .corner__cards { grid-template-columns: repeat(4, 1fr); justify-content: stretch; gap: 12px; }
+  .corner__entry, .corner__card { width: 100%; max-width: none; min-height: 0; padding: 14px 8px 12px; }
+  .corner__entry-icon { font-size: 1.55rem; margin-bottom: 4px; }
+  .corner__entry h3, .corner__card h3 { font-size: .82rem; }
+  .corner__wip { font-size: 1.6rem; margin-bottom: 4px; }
   .corner__entry p, .corner__card p {
     position: static;
     transform: none;
     width: auto;
-    margin-top: 8px;
+    margin-top: 6px;
     padding: 0;
     border: none;
     box-shadow: none;
     background: transparent;
     opacity: 1;
     visibility: visible;
+    font-size: .7rem;
+    line-height: 1.5;
   }
+}
+
+/* 手机：卡片更紧凑，描述文字收起（只看图标和标题） */
+@media (max-width: 480px) {
+  .corner__entry p, .corner__card p { display: none; }
+  .corner__entry, .corner__card { padding: 12px 6px 10px; }
+  .corner__entry-icon { font-size: 1.4rem; }
+  .corner__entry h3, .corner__card h3 { font-size: .78rem; }
 }
 
 /* ---------- 联系 ---------- */
@@ -1658,9 +1676,14 @@ body.music-page .focus-player {
 }
 .page-veil--night { background: linear-gradient(165deg, #262b4a 0%, #15172e 55%, #0e1020 100%); }
 .page-veil--day { background: linear-gradient(165deg, #fff3f7 0%, #ffe7f0 55%, #ffd9e8 100%); }
-.page-veil--dusk { background: linear-gradient(165deg, #43365e 0%, #5d4c80 55%, #7f6a9e 100%); }
+.page-veil--dusk { background: linear-gradient(165deg, #efe6fb 0%, #e4d5f6 55%, #d5c1f0 100%); }
 .page-veil--blush { background: linear-gradient(165deg, #ffd9e9 0%, #ffc3d9 55%, #e6d8f6 100%); }
 .page-veil--enter { animation: page-veil-out 0.6s ease 0.08s both; }
+/* 夜晚模式：转场纱幕也换深色版（与主题联动） */
+html[data-theme="dark"] .page-veil--day { background: linear-gradient(165deg, #2b2230 0%, #241a28 55%, #1b1320 100%); }
+html[data-theme="dark"] .page-veil--dusk { background: linear-gradient(165deg, #2a2140 0%, #32284f 55%, #3b2f5c 100%); }
+html[data-theme="dark"] .page-veil--night { background: linear-gradient(165deg, #1b1f38 0%, #12142a 55%, #0d0f1e 100%); }
+html[data-theme="dark"] .page-veil--blush { background: linear-gradient(165deg, #3a2440 0%, #32203a 55%, #251b33 100%); }
 @keyframes page-veil-out {
   from { opacity: 1; }
   to { opacity: 0; }

@@ -1,6 +1,14 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('sheng-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>迷路了 ✿ 小圣的小窝</title>
@@ -30,6 +38,16 @@
       --radius: 28px;
       --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
     }
+    html[data-theme="dark"] {
+      --pink: #f28bb4;
+      --pink-deep: #ff9ec6;
+      --pink-soft: #4a3342;
+      --ink: #e8d9e3;
+      --ink-soft: #b6a2b0;
+      --card: #2f2633;
+      --bg: #241b27;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html { height: 100%; }
@@ -50,6 +68,12 @@
         radial-gradient(1200px 500px at 50% -10%, var(--pink-soft) 0%, transparent 70%);
       background-size: 28px 28px, 28px 28px, auto;
       overflow: hidden;
+    }
+    html[data-theme="dark"] body {
+      background-image:
+        linear-gradient(rgba(242, 167, 195, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(242, 167, 195, 0.08) 1px, transparent 1px),
+        radial-gradient(1200px 500px at 50% -10%, var(--pink-soft) 0%, transparent 70%);
     }
 
     ::selection { background: var(--pink-soft); color: var(--pink-deep); }
@@ -195,6 +219,7 @@
       color: var(--ink-soft);
       opacity: 0.75;
     }
+
 
     /* ---------- 减少动态偏好：全部动效降级为静止 ---------- */
     @media (prefers-reduced-motion: reduce) {

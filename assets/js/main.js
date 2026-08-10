@@ -51,6 +51,12 @@
       leaveTo("playlist.html", "blush");
     });
   });
+  Array.prototype.forEach.call(document.querySelectorAll('a[href="bookmarks.html"]'), function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      leaveTo("bookmarks.html", "blush");
+    });
+  });
 
   /* ---------- 主题切换（记忆偏好） ---------- */
   var root = document.documentElement;

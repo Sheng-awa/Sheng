@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('sheng-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>对弈 ✿ 小圣的小窝</title>
@@ -19,7 +27,14 @@
       --pink: #ec6f9c;
       --pink-deep: #d94f82;
       --ink: #6f5560;
+      --card-bg: #ffffff;
       --ease: cubic-bezier(.22, .61, .36, 1);
+    }
+    html[data-theme="dark"] {
+      --pink: #f28bb4;
+      --pink-deep: #ff9ec6;
+      --ink: #e8d9e3;
+      --card-bg: #2f2633;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -34,6 +49,12 @@
       padding: 40px 24px 56px 244px;   /* 左侧给导航留位 */
       overflow-x: hidden;
     }
+    html[data-theme="dark"] body {
+      background-color: #241b27;
+      background-image:
+        linear-gradient(rgba(242, 167, 195, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(242, 167, 195, .08) 1px, transparent 1px);
+    }
 
     /* ---------- 左侧导航（和小窝同款） ---------- */
     .side-nav {
@@ -43,7 +64,13 @@
       border-right: 1.5px solid rgba(236, 143, 178, .3);
       display: flex; flex-direction: column; padding: 26px 14px; gap: 4px;
     }
+    /* 夜晚模式：侧栏等其他区域跟随变暗；只有棋盘方框保持白色 */
+    html[data-theme="dark"] .side-nav {
+      background: rgba(34, 25, 33, .88);
+      border-right-color: rgba(242, 167, 195, .25);
+    }
     .side-nav__logo { font-size: 1.45rem; color: #5f4450; padding: 0 10px 18px; letter-spacing: .04em; }
+    html[data-theme="dark"] .side-nav__logo { color: #e9c8d8; }
     .side-nav__logo span { color: var(--pink); }
     .side-nav__item {
       display: flex; align-items: center; gap: 10px; padding: 11px 14px;
@@ -52,16 +79,37 @@
       transition: background .2s var(--ease), color .2s;
     }
     .side-nav__item:hover { background: rgba(236, 143, 178, .15); }
+    html[data-theme="dark"] .side-nav__item:hover { background: rgba(242, 167, 195, .22); }
     .side-nav__item.is-active { background: var(--pink); color: #fff; }
     .side-nav__spacer { flex: 1; }
     .side-nav__home { color: var(--pink-deep); }
 
+    /* 中国象棋小徽标：红色圆底白字「帅」（替代国际象棋 emoji） */
+    .chess-ico {
+      display: inline-grid;
+      place-items: center;
+      width: 1.7em;
+      height: 1.7em;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f25d5d, #c93a3a);
+      color: #fff;
+      font-size: 0.72em;
+      font-style: normal;
+      line-height: 1;
+      box-shadow: 0 2px 6px rgba(200, 60, 60, 0.35);
+      flex: none;
+    }
+
+
     /* ---------- 翻页入场：像翻开书页一样揭开页面（与跳转纱幕同色，翻过去不突兀） ---------- */
     .page-open {
       position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-      background: linear-gradient(165deg, #43365e 0%, #5d4c80 55%, #7f6a9e 100%);
+      background: linear-gradient(165deg, #efe6fb 0%, #e4d5f6 55%, #d5c1f0 100%);
       transform-origin: left center;
       animation: page-open-out .62s var(--ease) .06s both;
+    }
+    html[data-theme="dark"] .page-open {
+      background: linear-gradient(165deg, #2a2140 0%, #32284f 55%, #3b2f5c 100%);
     }
     @keyframes page-open-out {
       from { transform: perspective(1600px) rotateY(0deg); opacity: 1; }
@@ -72,8 +120,10 @@
 
     .xq-header { text-align: center; margin-bottom: 18px; }
     .xq-title { font-size: clamp(1.8rem, 4vw, 2.4rem); font-weight: 400; color: #5f4450; letter-spacing: .06em; }
+    html[data-theme="dark"] .xq-title { color: #e9c8d8; }
     .xq-title span { color: var(--pink); }
     .xq-sub { color: #a57e8b; font-size: 1rem; margin-top: 6px; }
+    html[data-theme="dark"] .xq-sub { color: #a28798; }
 
     /* ---------- 主区：棋盘 + 侧栏 ---------- */
     .xq-main { display: flex; gap: 24px; justify-content: center; align-items: flex-start; }
@@ -91,15 +141,22 @@
       border-radius: 14px; padding: 14px 16px;
       box-shadow: 0 8px 20px rgba(178, 110, 140, .18);
     }
+    html[data-theme="dark"] .panel {
+      background: linear-gradient(180deg, #2f2633 0%, #2a222e 100%);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, .35);
+    }
     #status { font-size: 1.12rem; color: #5f4450; text-align: center; padding: 4px 0 2px; }
+    html[data-theme="dark"] #status { color: #e9c8d8; }
     #status.check { color: #d94f82; }
 
     .ctl-row label { display: flex; flex-direction: column; gap: 4px; font-size: .88rem; color: #a57e8b; }
+    html[data-theme="dark"] .ctl-row label { color: #a28798; }
     select {
       font-family: inherit; font-size: .95rem; color: var(--ink);
       padding: 7px 10px; border-radius: 10px; border: 1.5px solid rgba(236, 111, 156, .35);
-      background: #fff; outline: none; cursor: pointer;
+      background: var(--card-bg); outline: none; cursor: pointer;
     }
+    html[data-theme="dark"] select { border-color: rgba(242, 167, 195, .35); }
     .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
     .btns button {
       flex: 1 1 calc(50% - 4px); font-family: inherit; font-size: .95rem; color: #fff; cursor: pointer;
@@ -110,7 +167,7 @@
     }
     .btns button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(236, 111, 156, .4); }
     .btns button:disabled { opacity: .4; cursor: default; box-shadow: none; }
-    .btns button.ghost { background: #fff; color: var(--pink-deep); border: 1.5px solid rgba(236, 111, 156, .4); box-shadow: none; }
+    .btns button.ghost { background: var(--card-bg); color: var(--pink-deep); border: 1.5px solid rgba(236, 111, 156, .4); box-shadow: none; }
     /* 小灯泡提示 */
     #hintBtn { flex: 1 1 100%; background: linear-gradient(135deg, #f7c948, #eda93a); color: #6b4f10; }
     #hintBtn:hover:not(:disabled) { box-shadow: 0 8px 16px rgba(237, 169, 58, .45); }
@@ -122,9 +179,12 @@
       border: 2.5px dashed rgba(236, 143, 178, .55); border-radius: 16px;
       padding: 44px 30px;
     }
+    html[data-theme="dark"] .wip-card { background: rgba(47, 38, 51, .72); }
     .wip-card__icon { font-size: 3rem; margin-bottom: 14px; }
     .wip-card h3 { font-weight: 400; color: #5f4450; font-size: 1.4rem; margin-bottom: 8px; }
     .wip-card p { color: #a57e8b; line-height: 1.8; }
+    html[data-theme="dark"] .wip-card h3 { color: #e9c8d8; }
+    html[data-theme="dark"] .wip-card p { color: #a28798; }
 
     /* ---------- 移动端：导航变顶栏 ---------- */
     @media (max-width: 920px) {
@@ -157,7 +217,7 @@
   <!-- 左侧导航：点一下就地切换棋局，不跳转 -->
   <nav class="side-nav">
     <div class="side-nav__logo">对弈 <span>✿</span></div>
-    <button class="side-nav__item is-active" type="button" data-game="xiangqi">♟️ 中国象棋</button>
+    <button class="side-nav__item is-active" type="button" data-game="xiangqi"><i class="chess-ico">帅</i> 中国象棋</button>
     <button class="side-nav__item" type="button" data-game="gomoku">⚫ 五子棋</button>
     <button class="side-nav__item" type="button" data-game="go">◯ 围棋</button>
     <div class="side-nav__spacer"></div>

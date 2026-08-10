@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('sheng-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>小圣的手帐 ✿ 小圣的小窝</title>
@@ -22,6 +30,7 @@
       --ink: #6f5560;
       --paper-line: #e9d8b6;
       --paper-line2: #f8eeda;
+      --card-bg: #ffffff;
       --ease: cubic-bezier(.22, .61, .36, 1);
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -37,17 +46,24 @@
       padding: 88px 18px 64px;
       overflow-x: hidden;   /* 窄窗口时书缘标签允许被裁掉一点，不许出横向滚动条 */
     }
+    html[data-theme="dark"] body {
+      background-color: #241b27;
+      background-image:
+        linear-gradient(rgba(242, 167, 195, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(242, 167, 195, .08) 1px, transparent 1px);
+    }
     img { user-select: none; }
 
     /* ---------- 回小窝 ---------- */
     .back-home {
       position: fixed; top: 20px; left: 22px; z-index: 40;
-      padding: 9px 18px; background: #fff; color: var(--pink-deep);
+      padding: 9px 18px; background: var(--card-bg); color: var(--pink-deep);
       border-radius: 999px; text-decoration: none; font-size: .98rem;
       box-shadow: 0 3px 12px rgba(210, 110, 150, .25);
       transition: transform .3s var(--ease), box-shadow .3s var(--ease);
     }
     .back-home:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(210, 110, 150, .34); }
+
 
     /* ---------- 书本外壳（拟物重点） ---------- */
     /* 两侧固定留 110px+：书缘标签最深伸出 ~93px，窄窗时书自动变窄、标签永不被裁 */
@@ -210,7 +226,7 @@
     .hand { line-height: 2.0; font-size: 1.06rem; color: #7c5f6a; }
     .chapter-tag {
       display: inline-block; padding: 6px 16px; border-radius: 999px;
-      background: #fff; color: var(--pink-deep); font-size: .92rem;
+      background: var(--card-bg); color: var(--pink-deep); font-size: .92rem;
       box-shadow: 0 3px 10px rgba(210, 110, 150, .2);
     }
 

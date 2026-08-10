@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('sheng-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>收藏夹 🔖 小圣的小窝</title>
+  <meta name="description" content="小圣常逛的小地方，都贴在这儿。" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       收藏夹（bookmarks.html · 单文件实现）
+       手帐风书签墙：分类 + 一张张小卡片，点一下就飞过去。
+       数据在 script 顶部 BOOKMARKS 数组，加收藏 = 加一行：
+       { cat: 分类, icon: 图标, name: 名字, url: 网页地址, desc: 一句话 }
+       ============================================================ */
+    :root {
+      --pink: #ec6f9c;
+      --pink-deep: #d94f82;
+      --lavender: #b9a7e6;
+      --lavender-deep: #8f76c9;
+      --ink: #6f5560;
+      --ink-soft: #a98f9c;
+      --card-bg: #ffffff;
+      --ease: cubic-bezier(.22, .61, .36, 1);
+    }
+    html[data-theme="dark"] {
+      --pink: #f28bb4;
+      --pink-deep: #ff9ec6;
+      --lavender: #a58fd6;
+      --lavender-deep: #c3aef0;
+      --ink: #e8d9e3;
+      --ink-soft: #b6a2b0;
+      --card-bg: #2f2633;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      font-family: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background-color: #fdeef4;
+      background-image:
+        linear-gradient(rgba(238, 152, 188, .15) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(238, 152, 188, .15) 1px, transparent 1px),
+        radial-gradient(900px 420px at 50% -5%, rgba(185, 167, 230, .35) 0%, transparent 70%);
+      background-size: 26px 26px, 26px 26px, auto;
+      padding: 88px 18px 64px;
+      overflow-x: hidden;
+    }
+    html[data-theme="dark"] body {
+      background-color: #241b27;
+      background-image:
+        linear-gradient(rgba(242, 167, 195, .08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(242, 167, 195, .08) 1px, transparent 1px),
+        radial-gradient(900px 420px at 50% -5%, rgba(165, 143, 214, .22) 0%, transparent 70%);
+    }
+
+    /* ---------- 回小窝 / 回喜欢 ---------- */
+    .back-home {
+      position: fixed; top: 20px; left: 22px; z-index: 40;
+      padding: 9px 18px; background: var(--card-bg); color: var(--pink-deep);
+      border-radius: 999px; text-decoration: none; font-size: .98rem;
+      box-shadow: 0 3px 12px rgba(210, 110, 150, .25);
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+    .back-likes {
+      position: fixed; top: 20px; right: 22px; z-index: 40;
+      padding: 9px 18px; background: var(--card-bg); color: var(--lavender-deep);
+      border-radius: 999px; text-decoration: none; font-size: .98rem;
+      box-shadow: 0 3px 12px rgba(178, 110, 140, .25);
+      transition: transform .3s var(--ease), box-shadow .3s var(--ease);
+    }
+    .back-home:hover, .back-likes:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(210, 110, 150, .34); }
+
+
+    /* ---------- 页头 ---------- */
+    .bm-header { text-align: center; }
+    .bm-title { font-size: clamp(2.1rem, 5vw, 2.9rem); font-weight: 400; color: #5f4450; letter-spacing: .06em; }
+    html[data-theme="dark"] .bm-title { color: #e9c8d8; }
+    .bm-title span { background: linear-gradient(120deg, var(--pink), var(--lavender)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .title-underline { display: block; width: 220px; margin: 8px auto 14px; }
+    .bm-sub { color: #a57e8b; font-size: 1.02rem; }
+    html[data-theme="dark"] .bm-sub { color: #a28798; }
+
+    /* ---------- 分类 + 卡片墙 ---------- */
+    .bm-main { max-width: 860px; margin: 0 auto; }
+    .bm-cat { margin-top: 38px; }
+    .bm-cat:first-child { margin-top: 44px; }
+    .bm-cat__title {
+      display: flex; align-items: baseline; gap: 10px;
+      font-size: 1.22rem; font-weight: 400; color: var(--lavender-deep);
+      letter-spacing: .08em; margin-bottom: 16px;
+    }
+    .bm-cat__title::after {
+      content: ""; flex: 1; height: 2px; border-radius: 2px;
+      background: linear-gradient(90deg, rgba(185, 167, 230, .55), transparent);
+    }
+    .bm-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .bm-card {
+      position: relative;
+      display: flex; flex-direction: column; gap: 4px;
+      padding: 18px 18px 16px;
+      background: var(--card-bg);
+      border: 2px solid rgba(236, 111, 156, .16);
+      border-radius: 16px;
+      text-decoration: none; color: var(--ink);
+      box-shadow: 0 5px 16px rgba(178, 110, 140, .12);
+      transform: translateY(12px); opacity: 0;
+      transition: transform .5s var(--ease), box-shadow .3s var(--ease),
+        border-color .3s var(--ease), opacity .5s var(--ease);
+    }
+    .bm-card.is-in { transform: translateY(0); opacity: 1; }
+    .bm-card:hover { border-color: var(--pink); box-shadow: 0 12px 26px rgba(178, 110, 140, .24); transform: translateY(-3px); }
+    .bm-card__icon { font-size: 1.8rem; line-height: 1.2; margin-bottom: 6px; }
+    .bm-card__name { font-size: 1.08rem; color: #5f4450; }
+    .bm-card__desc { font-size: .86rem; color: var(--ink-soft); line-height: 1.55; }
+    html[data-theme="dark"] .bm-card { border-color: rgba(242, 167, 195, .22); }
+    html[data-theme="dark"] .bm-card__name { color: #f2dce8; }
+    .bm-card__tag {
+      position: absolute; top: 14px; right: 16px;
+      padding: 2px 8px; border-radius: 999px;
+      font-size: .72rem; letter-spacing: .08em;
+      background: rgba(185, 167, 230, .18); color: var(--lavender-deep);
+      transition: transform .3s var(--ease), color .3s var(--ease);
+    }
+    .bm-card:hover .bm-card__tag { transform: translate(2px, -2px); }
+
+    .bm-footer { text-align: center; color: #c09aa6; margin-top: 56px; font-size: .95rem; }
+    html[data-theme="dark"] .bm-footer { color: #a28798; }
+
+    @media (max-width: 600px) {
+      body { padding: 84px 12px 48px; }
+      .bm-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+      .bm-card { padding: 14px 14px 12px; }
+      .bm-card__icon { font-size: 1.5rem; }
+      .bm-card__name { font-size: 1rem; }
+      .bm-card__desc { font-size: .8rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .bm-card { transition: none !important; opacity: 1; transform: none; }
+    }
+
+    /* ---------- 页面转场纱幕：进入时粉纱淡出（与全站一致） ---------- */
+    .page-veil {
+      position: fixed; inset: 0; z-index: 9999;
+      pointer-events: none; opacity: 0; transition: opacity 0.38s ease;
+    }
+    .page-veil--blush { background: linear-gradient(165deg, #ffd9e9 0%, #ffc3d9 55%, #e6d8f6 100%); }
+    html[data-theme="dark"] .page-veil--blush { background: linear-gradient(165deg, #3a2440 0%, #32203a 55%, #251b33 100%); }
+    .page-veil--enter { animation: page-veil-out 0.6s ease 0.08s both; }
+    @keyframes page-veil-out {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .page-veil { transition: none; }
+      .page-veil--enter { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 页面转场纱幕：进入时粉纱淡出 -->
+  <div class="page-veil page-veil--blush page-veil--enter" aria-hidden="true"></div>
+
+  <a class="back-home" href="index.html" title="回到小窝">❮ 回小窝</a>
+  <a class="back-likes" href="index.html#likes" title="回到喜欢">❤ 喜欢</a>
+
+  <header class="bm-header">
+    <h1 class="bm-title">收藏夹 <span>🔖</span></h1>
+    <svg class="title-underline" viewBox="0 0 300 18" aria-hidden="true">
+      <path d="M4,10 C60,2 120,16 170,9 S 270,4 296,10" fill="none" stroke="#b9a7e6" stroke-width="4" stroke-linecap="round" opacity=".7" />
+    </svg>
+    <p class="bm-sub">常逛的小地方，点一下就飞过去 ✿</p>
+  </header>
+
+  <main class="bm-main" id="bmMain"></main>
+
+  <p class="bm-footer">网易云会唤起 App；Bilibili 手机唤起 App、电脑直接开网页。想加收藏？在 BOOKMARKS 数组里加一行 ✿</p>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* ================================================================
+         收藏夹数据：想加收藏就在数组里加一行，会自动按 cat 分组。
+         app = 手机 App 唤起协议（可省）；appWin = Windows 桌面协议（可省）；
+         url = 网页地址（App 打不开时的兜底 / 网页版入口）。
+         Windows 上没有 appWin 的条目（如 Bilibili）直接开网页。
+         例：{ cat: '常逛', icon: '📺', name: 'Bilibili',
+               app: 'bilibili://', url: 'https://www.bilibili.com',
+               desc: '追番看视频' }
+         ================================================================ */
+      var BOOKMARKS = [
+        { cat: '常逛', icon: '📺', name: 'Bilibili', app: 'bilibili://', url: 'https://www.bilibili.com', desc: '追番看视频' },
+        { cat: '常逛', icon: '🎵', name: '网易云音乐', app: 'cloudmusic://', appWin: 'orpheus://', url: 'https://music.163.com', desc: '听歌都在这儿' }
+      ];
+
+      var mainEl = document.getElementById('bmMain');
+      var fallbackTimer = null;
+      var isWin = /Windows/i.test(navigator.userAgent);
+
+      function esc(t) {
+        return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function render() {
+        var cats = [];
+        BOOKMARKS.forEach(function (b) {
+          if (cats.indexOf(b.cat) < 0) cats.push(b.cat);
+        });
+        cats.forEach(function (cat) {
+          var sec = document.createElement('section');
+          sec.className = 'bm-cat';
+          var title = document.createElement('h2');
+          title.className = 'bm-cat__title';
+          title.textContent = cat;
+          var grid = document.createElement('div');
+          grid.className = 'bm-grid';
+          BOOKMARKS.forEach(function (b) {
+            if (b.cat !== cat) return;
+            var a = document.createElement('a');
+            a.className = 'bm-card';
+            a.href = b.url;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            /* Windows 上没有桌面协议的条目（Bilibili）直接开网页 */
+            var useApp = !!(b.app && !(isWin && !b.appWin));
+            a.innerHTML =
+              '<span class="bm-card__icon">' + esc(b.icon) + '</span>' +
+              '<span class="bm-card__name">' + esc(b.name) + '</span>' +
+              (b.desc ? '<span class="bm-card__desc">' + esc(b.desc) + '</span>' : '') +
+              '<span class="bm-card__tag">' + (useApp ? 'App' : '网页') + '</span>';
+            if (useApp) {
+              a.addEventListener('click', function (e) { e.preventDefault(); tryOpen(b); });
+            }
+            grid.appendChild(a);
+          });
+          sec.appendChild(title);
+          sec.appendChild(grid);
+          mainEl.appendChild(sec);
+        });
+
+        // 入场动画：一张张轻轻冒出来
+        var cards = mainEl.querySelectorAll('.bm-card');
+        (function stage(n) {
+          if (n >= cards.length) return;
+          cards[n].classList.add('is-in');
+          setTimeout(function () { stage(n + 1); }, 70);
+        })(0);
+      }
+
+      /* 点卡片：先试唤起 App（Windows 有桌面协议就用桌面协议）；
+         页面切到后台 / 卸载 / 窗口失焦都说明 App 打开了，
+         否则 3 秒后自动跳去网页版兜底 */
+      function tryOpen(b) {
+        var opened = false;
+        var scheme = (isWin && b.appWin) ? b.appWin : b.app;
+        function markOpened() { opened = true; }
+        document.addEventListener('visibilitychange', function () {
+          if (document.hidden) opened = true;
+        }, { once: true });
+        window.addEventListener('pagehide', markOpened, { once: true });
+        window.addEventListener('blur', markOpened, { once: true });
+        clearTimeout(fallbackTimer);
+        location.href = scheme;
+        fallbackTimer = setTimeout(function () {
+          if (!opened) window.location.href = b.url;
+        }, 3000);
+      }
+
+      render();
+    })();
+  </script>
+</body>
+</html>
