@@ -191,7 +191,7 @@
     .go-wrap { position: relative; }
     #goboard {
       display: block;
-      width: min(660px, calc(100vw - 300px));
+      width: min(872px, calc(100vw - 300px));
       height: auto;
       border-radius: 14px;
       box-shadow: 0 10px 26px rgba(0, 0, 0, .25);
@@ -207,6 +207,43 @@
       padding: 8px 12px;
     }
     html[data-theme="dark"] .go-caps { color: #e9c8d8; }
+    .go-winrate {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: rgba(236, 143, 178, .14);
+      border-radius: 12px;
+    }
+    .go-winrate__label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .85rem;
+      color: var(--ink, #6f5560);
+      margin-bottom: 7px;
+    }
+    html[data-theme="dark"] .go-winrate__label { color: #e9c8d8; }
+    .go-winrate__bar {
+      display: flex;
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(236, 143, 178, .15);
+    }
+    .go-winrate__b {
+      background: #2b2b2b;
+      width: 50%;
+      transition: width .55s var(--ease);
+    }
+    .go-winrate__w {
+      background: #f2f2f2;
+      width: 50%;
+      transition: width .55s var(--ease);
+    }
+    html[data-theme="dark"] .go-winrate__b { background: #0c0c0c; }
+    html[data-theme="dark"] .go-winrate__w { background: #d9d9d9; }
+    /* 夜晚/星空下棋盘保持不透明：亮木描边 + 强阴影，和深色背景分开 */
+    html[data-theme="dark"] #goboard {
+      box-shadow: 0 0 0 2px rgba(217, 178, 106, .38), 0 14px 32px rgba(0, 0, 0, .5);
+    }
 
     /* ---------- 移动端：导航变顶栏 ---------- */
     @media (max-width: 920px) {
@@ -225,8 +262,7 @@
       .xq-side { width: min(528px, calc(100vw - 28px)); }
       #board { width: min(528px, calc(100vw - 28px)); }
       #gboard { width: min(720px, calc(100vw - 28px)); }
-      #goboard { width: min(560px, calc(100vw - 28px)); }
-    }
+      #goboard { width: min(560px, calc(100vw - 28px)); }    }
     @media (prefers-reduced-motion: reduce) {
       .page-open { display: none; }
       .side-nav__item, .btns button { transition: none !important; }
@@ -324,12 +360,16 @@
       </header>
       <div class="xq-main">
         <div class="xq-board-wrap go-wrap">
-          <canvas id="goboard" width="495" height="495"></canvas>
+          <canvas id="goboard" width="872" height="660"></canvas>
         </div>
         <aside class="xq-side">
           <div class="panel">
             <div id="gostatus">轮到你落子（黑先）</div>
             <div class="go-caps" id="goCaps">提子　黑 0 · 白 0</div>
+            <div class="go-winrate" id="goWinrate">
+              <div class="go-winrate__label"><span>实时胜率</span><span id="goWrText">黑 50% · 白 50%</span></div>
+              <div class="go-winrate__bar"><span class="go-winrate__b" id="goWrB"></span><span class="go-winrate__w" id="goWrW"></span></div>
+            </div>
           </div>
           <div class="panel">
             <div class="ctl-row">
@@ -1593,7 +1633,7 @@
 
       /*GO-START*/
       var GoEngine = (function () {
-        var N = 13;
+        var N = 19;
         var EMPTY = 0, BLACK = 1, WHITE = 2;
         var DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
@@ -1695,13 +1735,25 @@
         };
       })();
       /*GO-END*/
-
-      var N = GoEngine.N;
+var N = GoEngine.N;
       var MARGIN = 33, CELL = 33, R = 14.5;
+      var SIDE = 106;                       /* 两侧棋盒区宽 */
+      var GOX = SIDE + MARGIN;              /* 棋盘区起点 x */
+      var SIZE = (N - 1) * CELL + MARGIN * 2;   /* 660（19 路） */
+      var CW = SIDE * 2 + SIZE;             /* 872 */
+      var CH = SIZE;                        /* 660 */
+      var BOX_B = { x: SIDE / 2, y: CH / 2 };        /* 黑盒在左 */
+      var BOX_W = { x: CW - SIDE / 2, y: CH / 2 };   /* 白盒在右 */
+
       var canvas = document.getElementById('goboard');
       var ctx = canvas.getContext('2d');
+      canvas.width = CW;
+      canvas.height = CH;
       var statusEl = document.getElementById('gostatus');
       var capsEl = document.getElementById('goCaps');
+      var wrText = document.getElementById('goWrText');
+      var wrB = document.getElementById('goWrB');
+      var wrW = document.getElementById('goWrW');
       var sideSel = document.getElementById('gosideSel');
       var undoBtn = document.getElementById('goundoBtn');
       var passBtn = document.getElementById('gopassBtn');
@@ -1710,15 +1762,21 @@
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       var board, history = [], player, turn, over, aiBusy, caps, lastMove, passBy;
-      var anim = null, animRaf = null;
+      var placeAnim = null, flyAnim = null, removeAnim = null, flyDoneCb = null, loopRaf = 0;
+      var seenKeys = [];
+
+      function idx(x, y) { return y * N + x; }
 
       /* 主题色（进入页面时读一次；星空/深色都是 dark） */
       function palette() {
         var dark = document.documentElement.getAttribute('data-theme') === 'dark';
         return dark
-          ? { wood: '#4a3826', line: '#d2a96e', coord: 'rgba(210,169,110,.5)', star: '#d2a96e' }
+          ? { wood: '#6b4e30', line: '#d9b26a', coord: 'rgba(217,178,106,.5)', star: '#d9b26a' }
           : { wood: '#e6bd7a', line: '#6d4a26', coord: 'rgba(109,74,38,.45)', star: '#6d4a26' };
       }
+
+      function px(x) { return GOX + MARGIN + x * CELL; }
+      function py(y) { return MARGIN + y * CELL; }
 
       function newGame() {
         board = GoEngine.createBoard();
@@ -1730,12 +1788,14 @@
         caps = { 1: 0, 2: 0 };
         lastMove = null;
         passBy = null;
-        anim = null;
+        placeAnim = null; flyAnim = null; removeAnim = null; flyDoneCb = null;
+        seenKeys = [];
         setStatus(player === GoEngine.BLACK ? '轮到你落子（黑先）' : '小圣执黑先行…');
         renderCaps();
+        updateWinrate();
         drawAll();
         updateButtons();
-        if (player !== GoEngine.BLACK) aiTurn();
+        if (player !== GoEngine.BLACK) setTimeout(aiTurn, 600);
       }
 
       function setStatus(text, isEnd) {
@@ -1746,87 +1806,39 @@
         capsEl.textContent = '提子　黑 ' + caps[1] + ' · 白 ' + caps[2];
       }
       function updateButtons() {
-        undoBtn.disabled = over || !history.length || turn !== player;
+        undoBtn.disabled = over || !history.length || turn !== player || aiBusy;
         passBtn.disabled = over || aiBusy || turn !== player;
       }
 
-      /* ---------- 绘制 ---------- */
-      function drawAll() {
-        var p = palette();
-        ctx.fillStyle = p.wood;
-        ctx.fillRect(0, 0, SIZE, SIZE);
-        ctx.strokeStyle = p.line;
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        for (var i = 0; i < N; i++) {
-          ctx.moveTo(MARGIN + i * CELL, MARGIN);
-          ctx.lineTo(MARGIN + i * CELL, MARGIN + (N - 1) * CELL);
-          ctx.moveTo(MARGIN, MARGIN + i * CELL);
-          ctx.lineTo(MARGIN + (N - 1) * CELL, MARGIN + i * CELL);
+      /* ---------- 实时胜率（目数 + 提子 + 盘面子的比例粗算，仅供娱乐） ---------- */
+      function updateWinrate() {
+        var t = GoEngine.countTerritory(board);
+        var bs = 0, ws = 0;
+        for (var i = 0; i < board.length; i++) {
+          if (board[i] === GoEngine.BLACK) bs++;
+          else if (board[i] === GoEngine.WHITE) ws++;
         }
-        ctx.stroke();
-        /* 星位：四角星 + 天元（N≥19 时补四边星），随 N 自适应 */
-        var STARS = [[3, 3], [N - 4, 3], [3, N - 4], [N - 4, N - 4]];
-        if (N % 2 === 1) STARS.push([(N - 1) / 2, (N - 1) / 2]);
-        if (N >= 19) {
-          var sh = (N - 1) / 2;
-          STARS.push([sh, 3], [3, sh], [sh, N - 4], [N - 4, sh]);
-        }
-        ctx.fillStyle = p.star;
-        for (var s = 0; s < STARS.length; s++) {
-          ctx.beginPath();
-          ctx.arc(MARGIN + STARS[s][0] * CELL, MARGIN + STARS[s][1] * CELL, 3.2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        /* 坐标 */
-        ctx.fillStyle = p.coord;
-        ctx.font = '10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        for (var c = 0; c < N; c++) {
-          ctx.fillText(String(c + 1), MARGIN + c * CELL, MARGIN + (N - 1) * CELL + 18);
-          ctx.fillText(String(N - c), MARGIN - 18, MARGIN + c * CELL);
-        }
-        /* 棋子 + 提子动画 */
-        for (var y = 0; y < N; y++) {
-          for (var x = 0; x < N; x++) {
-            var v = board[idx(x, y)];
-            if (v === GoEngine.EMPTY) continue;
-            var removed = false;
-            if (anim && anim.removing) {
-              for (var r = 0; r < anim.removing.length; r++) {
-                if (anim.removing[r][0] === x && anim.removing[r][1] === y) { removed = true; break; }
-              }
-            }
-            var scale = 1, alpha = 1;
-            if (anim && anim.place && anim.place.x === x && anim.place.y === y && anim.place.color === v) {
-              var pr = anim.t / anim.dur;
-              scale = 0.35 + 0.65 * easeOut(pr);
-            }
-            if (removed) alpha = Math.max(0, 1 - anim.t / anim.dur);
-            drawStone(x, y, v, scale, alpha);
-          }
-        }
-        /* 最后一步小标记 */
-        if (lastMove && !(anim && anim.removing)) {
-          ctx.fillStyle = '#e04555';
-          ctx.beginPath();
-          ctx.arc(MARGIN + lastMove[0] * CELL, MARGIN + lastMove[1] * CELL, 3, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        var bScore = t.black + caps[1] + bs;
+        var wScore = t.white + caps[2] + ws;
+        var total = bScore + wScore;
+        var br = total ? Math.round((bScore / total) * 100) : 50;
+        var wr = Math.max(5, Math.min(95, br));
+        wrB.style.width = wr + '%';
+        wrW.style.width = (100 - wr) + '%';
+        wrText.textContent = '黑 ' + br + '% · 白 ' + (100 - br) + '%';
       }
-      function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
-      function drawStone(x, y, color, scale, alpha) {
-        var cx = MARGIN + x * CELL, cy = MARGIN + y * CELL;
+
+      /* ---------- 绘制 ---------- */
+      function drawStone(cx, cy, color, scale, alpha) {
         var rr = R * scale;
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = alpha === undefined ? 1 : alpha;
         if (color === GoEngine.BLACK) {
-          var g = ctx.createRadialGradient(cx - rr * 0.35, cy - rr * 0.35, rr * 0.15, cx, cy, rr);
+          var g = ctx.createRadialGradient(cx - rr * .35, cy - rr * .35, rr * .15, cx, cy, rr);
           g.addColorStop(0, '#6a6a6a');
           g.addColorStop(1, '#0d0d0d');
           ctx.fillStyle = g;
         } else {
-          var gw = ctx.createRadialGradient(cx - rr * 0.35, cy - rr * 0.35, rr * 0.15, cx, cy, rr);
+          var gw = ctx.createRadialGradient(cx - rr * .35, cy - rr * .35, rr * .15, cx, cy, rr);
           gw.addColorStop(0, '#ffffff');
           gw.addColorStop(1, '#cfcfcf');
           ctx.fillStyle = gw;
@@ -1839,41 +1851,172 @@
         if (color === GoEngine.WHITE) ctx.stroke();
         ctx.globalAlpha = 1;
       }
-      var SIZE = N * CELL + MARGIN * 2;
 
-      /* 落子动画 */
-      function animatePlace(x, y, color, removing) {
-        if (reduceMotion) { anim = null; drawAll(); return; }
-        anim = { t: 0, dur: 220, place: { x: x, y: y, color: color }, removing: removing };
-        cancelAnimationFrame(animRaf);
-        function step(now) {
-          if (!anim) return;
-          anim.t += 16;
-          if (anim.t >= anim.dur) { anim = null; drawAll(); return; }
-          drawAll();
-          animRaf = requestAnimationFrame(step);
+      /* 棋盒：木碗 + 三颗装饰子（和五子棋同款，黑左白右） */
+      function drawBowl(cx, cy, color) {
+        var g = ctx.createRadialGradient(cx - 12, cy - 14, 8, cx, cy, 50);
+        g.addColorStop(0, '#b58960');
+        g.addColorStop(1, '#7a5232');
+        ctx.beginPath();
+        ctx.arc(cx, cy, 46, 0, Math.PI * 2);
+        ctx.fillStyle = g;
+        ctx.fill();
+        ctx.strokeStyle = '#5d3f24';
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(cx, cy, 34, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(60, 40, 26, .55)';
+        ctx.fill();
+        ctx.lineWidth = 1;
+        drawStone(cx - 10, cy - 5, color, 0.62);
+        drawStone(cx + 12, cy - 2, color, 0.62);
+        drawStone(cx + 1, cy + 11, color, 0.62);
+      }
+
+      function drawAll() {
+        var p = palette();
+        ctx.fillStyle = p.wood;
+        ctx.fillRect(0, 0, CW, CH);
+        ctx.strokeStyle = p.line;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (var i = 0; i < N; i++) {
+          ctx.moveTo(px(0), py(i)); ctx.lineTo(px(N - 1), py(i));
+          ctx.moveTo(px(i), py(0)); ctx.lineTo(px(i), py(N - 1));
         }
-        animRaf = requestAnimationFrame(step);
+        ctx.stroke();
+        /* 星位（随 N 自适应） */
+        var STARS = [[3, 3], [N - 4, 3], [3, N - 4], [N - 4, N - 4]];
+        if (N % 2 === 1) STARS.push([(N - 1) / 2, (N - 1) / 2]);
+        if (N >= 19) {
+          var sh = (N - 1) / 2;
+          STARS.push([sh, 3], [3, sh], [sh, N - 4], [N - 4, sh]);
+        }
+        ctx.fillStyle = p.star;
+        for (var s = 0; s < STARS.length; s++) {
+          ctx.beginPath();
+          ctx.arc(px(STARS[s][0]), py(STARS[s][1]), 3.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        /* 坐标 */
+        ctx.fillStyle = p.coord;
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (var c = 0; c < N; c++) {
+          ctx.fillText(String(c + 1), px(c), py(N - 1) + 18);
+          ctx.fillText(String(N - c), px(0) - 18, py(c));
+        }
+        /* 提子淡出 */
+        var now = Date.now();
+        var rm = null;
+        if (removeAnim) {
+          var rk = Math.min(1, (now - removeAnim.t0) / 240);
+          if (rk >= 1) removeAnim = null;
+          else rm = { k: 1 - Math.pow(1 - rk, 2), pts: removeAnim.points };
+        }
+        /* 静态棋子（飞行中/飞回中的除外） */
+        for (var y = 0; y < N; y++) {
+          for (var x = 0; x < N; x++) {
+            var v = board[idx(x, y)];
+            if (v === GoEngine.EMPTY) continue;
+            var busy = false;
+            if (placeAnim && placeAnim.x === x && placeAnim.y === y) busy = true;
+            if (flyAnim) for (var f2 = 0; f2 < flyAnim.sprites.length && !busy; f2++) {
+              if (flyAnim.sprites[f2].x === x && flyAnim.sprites[f2].y === y) busy = true;
+            }
+            if (busy) continue;
+            var alpha = 1;
+            if (rm) for (var q = 0; q < rm.pts.length; q++) {
+              if (rm.pts[q][0] === x && rm.pts[q][1] === y) { alpha = 1 - rm.k; break; }
+            }
+            drawStone(px(x), py(y), v, 1, alpha);
+          }
+        }
+        /* 落子从棋盒飞入 */
+        if (placeAnim) {
+          var k2 = Math.min(1, (now - placeAnim.t0) / 260);
+          var e = 1 - Math.pow(1 - k2, 2);
+          drawStone(
+            placeAnim.fx + (placeAnim.tx - placeAnim.fx) * e,
+            placeAnim.fy + (placeAnim.ty - placeAnim.fy) * e,
+            placeAnim.color, 0.55 + 0.45 * e);
+          if (k2 >= 1) placeAnim = null;
+        }
+        /* 群体飞回棋盒（重开动画） */
+        if (flyAnim) {
+          var allDone = true;
+          for (var f = 0; f < flyAnim.sprites.length; f++) {
+            var sp = flyAnim.sprites[f];
+            var fk = (now - flyAnim.t0 - sp.dly) / 300;
+            if (fk <= 0) { allDone = false; continue; }
+            if (fk >= 1) continue;
+            allDone = false;
+            var fe = 1 - Math.pow(1 - Math.min(1, fk), 2);
+            ctx.globalAlpha = 1 - fe * 0.85;
+            drawStone(sp.fx + (sp.tx - sp.fx) * fe, sp.fy + (sp.ty - sp.fy) * fe, sp.color, 1 - 0.3 * fe);
+            ctx.globalAlpha = 1;
+          }
+          if (allDone) {
+            flyAnim = null;
+            if (flyDoneCb) { var cb = flyDoneCb; flyDoneCb = null; cb(); }
+          }
+        }
+        /* 最后一步红色小标记 */
+        if (lastMove && !placeAnim && !flyAnim) {
+          ctx.fillStyle = '#e04555';
+          ctx.beginPath();
+          ctx.arc(px(lastMove[0]), py(lastMove[1]), 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        /* 棋盒画在最上层：飞回的棋子像落进碗里 */
+        drawBowl(BOX_B.x, BOX_B.y, GoEngine.BLACK);
+        drawBowl(BOX_W.x, BOX_W.y, GoEngine.WHITE);
+      }
+
+      /* 动画循环：有动画就跑，没动画就停 */
+      function startLoop() {
+        cancelAnimationFrame(loopRaf);
+        function step() {
+          drawAll();
+          if (placeAnim || flyAnim || removeAnim) loopRaf = requestAnimationFrame(step);
+        }
+        loopRaf = requestAnimationFrame(step);
       }
 
       /* ---------- 落子流程 ---------- */
-      function idx(x, y) { return y * N + x; }
-      var seenKeys = [];
-
       function applyMove(x, y, color, fromAi) {
         var r = GoEngine.play(board, x, y, color);
         if (!r) return false;
         var key = GoEngine.boardKey(r.board);
         if (seenKeys.indexOf(key) >= 0) return false;   /* 劫/同型禁着 */
-        for (var k = 0; k < r.captured.length; k++) caps[color]++;
+        caps[color] += r.captured.length;
         seenKeys.push(key);
-        history.push({ board: board.slice(), last: lastMove, caps: { 1: caps[1], 2: caps[2] }, key: key });
+        history.push({
+          board: board.slice(),
+          last: lastMove,
+          caps: { 1: caps[1], 2: caps[2] },
+          key: key
+        });
         board = r.board;
         lastMove = [x, y];
         passBy = null;
-        if (r.captured.length) animatePlace(x, y, color, r.captured);
-        else animatePlace(x, y, color, null);
+        /* 动画：落子从对应棋盒飞入 + 提子淡出 */
+        if (reduceMotion) {
+          drawAll();
+        } else {
+          if (r.captured.length) removeAnim = { points: r.captured, t0: Date.now() };
+          var box = color === GoEngine.BLACK ? BOX_B : BOX_W;
+          placeAnim = {
+            x: x, y: y, color: color,
+            fx: box.x, fy: box.y, tx: px(x), ty: py(y),
+            t0: Date.now()
+          };
+          startLoop();
+        }
         renderCaps();
+        updateWinrate();
         return true;
       }
 
@@ -1931,35 +2074,34 @@
             var key = GoEngine.boardKey(r.board);
             if (seenKeys.indexOf(key) >= 0) continue;
             var score = 0;
-            score += r.captured.length * 900;                    /* 吃子，多多益善 */
+            score += r.captured.length * 900;
             var near = 0, atariOpp = 0;
+            var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
             for (var d = 0; d < 4; d++) {
-              var nx = x + (d === 0 ? 1 : d === 1 ? -1 : 0);
-              var ny = y + (d === 2 ? 1 : d === 3 ? -1 : 0);
+              var nx = x + dirs[d][0], ny = y + dirs[d][1];
               if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
               var nv = board[idx(nx, ny)];
               if (nv !== GoEngine.EMPTY) {
                 near++;
                 if (nv === opp) {
                   var g = GoEngine.group(board, nx, ny);
-                  if (g && g.liberties === 1) atariOpp++;        /* 叫吃对方 */
+                  if (g && g.liberties === 1) atariOpp++;
                 }
               }
             }
             score += atariOpp * 320;
-            score += near * 8;                                   /* 贴近战场 */
+            score += near * 8;
             if (moveCount < 8) {
               var sh = (N - 1) / 2;
               if ((x === sh && y === sh) || (x === 3 && y === 3) || (x === N - 4 && y === N - 4) ||
-                  (x === 3 && y === N - 4) || (x === N - 4 && y === 3)) score += 40;   /* 开局星位/天元 */
+                  (x === 3 && y === N - 4) || (x === N - 4 && y === 3)) score += 40;
             }
-            score += Math.random() * 60;                         /* 软软的不确定性 */
+            score += Math.random() * 60;
             candidates++;
             if (score > bestScore) { bestScore = score; best = [x, y]; }
           }
         }
         if (!best) return null;
-        /* 对手刚 pass 且自己也没好点 → 也 pass */
         if (passBy === 'player' && bestScore < 160 && candidates > 120) return null;
         return best;
       }
@@ -1977,21 +2119,13 @@
       /* ---------- 交互 ---------- */
       canvas.addEventListener('click', function (e) {
         var rect = canvas.getBoundingClientRect();
-        var scale = SIZE / rect.width;
-        var px = (e.clientX - rect.left) * scale;
-        var py = (e.clientY - rect.top) * scale;
-        var x = Math.round((px - MARGIN) / CELL);
-        var y = Math.round((py - MARGIN) / CELL);
+        var scale = CW / rect.width;
+        var px0 = (e.clientX - rect.left) * scale;
+        var py0 = (e.clientY - rect.top) * scale;
+        var x = Math.round((px0 - GOX - MARGIN) / CELL);
+        var y = Math.round((py0 - MARGIN) / CELL);
         if (x < 0 || y < 0 || x >= N || y >= N) return;
         tryPlace(x, y);
-      });
-
-      undoBtn.addEventListener('click', function () {
-        if (over || !history.length || turn !== player) return;
-        var back = history.pop();                       /* 弹玩家 */
-        if (history.length) back = history.pop();       /* 若上一手是 AI，连撤 */
-        restore(back);
-        if (turn !== player) { turn = player; }
       });
 
       function restore(snap) {
@@ -2002,12 +2136,20 @@
         seenKeys = [];
         for (var i = 0; i < history.length; i++) seenKeys.push(history[i].key);
         passBy = null;
-        anim = null;
+        placeAnim = null; flyAnim = null; removeAnim = null;
         setStatus('悔棋了 ✿ 轮到你落子');
         renderCaps();
+        updateWinrate();
         drawAll();
         updateButtons();
       }
+
+      undoBtn.addEventListener('click', function () {
+        if (over || !history.length || turn !== player || aiBusy) return;
+        var back = history.pop();
+        if (history.length) back = history.pop();
+        restore(back);
+      });
 
       passBtn.addEventListener('click', function () {
         if (over || aiBusy || turn !== player) return;
@@ -2017,16 +2159,40 @@
         setTimeout(aiTurn, 350);
       });
 
-      resetBtn.addEventListener('click', newGame);
-      sideSel.addEventListener('change', newGame);
+      resetBtn.addEventListener('click', function () {
+        if (flyAnim || placeAnim) return;
+        /* 重开动画：所有棋子各自飞回棋盒（黑回左、白回右） */
+        var sprites = [];
+        for (var y = 0; y < N; y++) {
+          for (var x = 0; x < N; x++) {
+            var v = board[idx(x, y)];
+            if (v === GoEngine.EMPTY) continue;
+            var box = v === GoEngine.BLACK ? BOX_B : BOX_W;
+            sprites.push({
+              x: x, y: y, color: v,
+              fx: px(x), fy: py(y), tx: box.x, ty: box.y,
+              dly: Math.random() * 280
+            });
+          }
+        }
+        if (!sprites.length || reduceMotion) { newGame(); return; }
+        aiBusy = true;
+        updateButtons();
+        flyAnim = { sprites: sprites, t0: Date.now() };
+        flyDoneCb = function () { newGame(); };
+        startLoop();
+      });
+
+      sideSel.addEventListener('change', function () {
+        if (flyAnim || placeAnim) return;
+        newGame();
+      });
       resignBtn.addEventListener('click', function () {
-        if (over) return;
+        if (over || flyAnim) return;
         over = true;
         setStatus('你认输了，小圣赢了 ✿', true);
         updateButtons();
       });
-
-      /* 鼠标移到落点上时的小光标提示（手指形状 canvas 已有 cursor:pointer） */
 
       newGame();
     })();
