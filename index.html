@@ -23,6 +23,9 @@
   <!-- 特效画布：粉色鼠标轨迹 + 飘雪 -->
   <canvas class="fx-canvas" id="fxCanvas" aria-hidden="true"></canvas>
 
+  <!-- 星空画布：星空模式开启时星星闪烁（JS 驱动） -->
+  <canvas class="star-canvas" id="starCanvas" aria-hidden="true"></canvas>
+
   <!-- 右下角占卜扑克牌：三张斜叠，悬停立起露字，点击翻牌占卜（六爻 / 一签 / 今日小幸运） -->
   <div class="cards" id="fortuneCards" aria-label="占卜">
     <div class="cards__bubble" id="cardsBubble" aria-hidden="true"></div>
@@ -64,9 +67,14 @@
         <a href="music.html"><span class="nav__icon">🎵</span><span class="nav__text">音乐</span></a>
       </nav>
     </div>
-    <button class="theme-toggle" id="themeToggle" aria-label="切换明暗主题" title="切换主题">
-      <span class="theme-toggle__icon">☾</span>
-    </button>
+    <div class="nav__right">
+      <button class="star-toggle" id="starToggle" aria-label="切换星空模式" title="星空模式">
+        <span class="star-toggle__icon">✦</span>
+      </button>
+      <button class="theme-toggle" id="themeToggle" aria-label="切换明暗主题" title="切换主题">
+        <span class="theme-toggle__icon">☾</span>
+      </button>
+    </div>
   </header>
 
   <main id="top">

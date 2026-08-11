@@ -109,6 +109,80 @@ a { color: inherit; text-decoration: none; }
   z-index: 200;
 }
 
+/* ---------- 星空模式 ---------- */
+/* 背景层：星云 + 深蓝紫渐变，随 data-star 淡入淡出 */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at 80% -10%, rgba(122, 91, 191, .5) 0%, transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(47, 80, 150, .55) 0%, transparent 60%),
+    linear-gradient(180deg, #0d1133 0%, #141a44 55%, #1d1847 100%);
+  opacity: 0;
+  transition: opacity 0.6s var(--ease);
+}
+html[data-star="on"] body::after { opacity: 1; }
+
+/* 星星粒子画布：闪烁 + 极慢漂移 */
+.star-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 180;
+  opacity: 0;
+  transition: opacity 0.8s var(--ease);
+}
+html[data-star="on"] .star-canvas { opacity: 1; }
+
+/* 星空模式：导航栏变毛玻璃液态玻璃，星云透过来 */
+html[data-star="on"] .nav {
+  background: linear-gradient(165deg, rgba(34, 38, 88, .55) 0%, rgba(24, 26, 66, .45) 100%);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 -1px 0 rgba(255, 255, 255, .04);
+}
+html[data-star="on"] .theme-toggle {
+  background: rgba(255, 255, 255, .12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 4px 14px rgba(10, 12, 40, .35);
+}
+html[data-star="on"] .theme-toggle:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .24), 0 8px 22px rgba(10, 12, 40, .5);
+}
+/* 宽屏侧边栏：玻璃边沿高光 */
+@media (min-width: 900px) {
+  html[data-star="on"] .nav {
+    border-right: 1px solid rgba(255, 255, 255, .14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), inset -1px 0 0 rgba(255, 255, 255, .05);
+  }
+}
+
+/* 星空模式：卡片 / 气泡等方框统一半透明毛玻璃，星空透过来 */
+html[data-star="on"] .quote,
+html[data-star="on"] .corner__entry,
+html[data-star="on"] .corner__card,
+html[data-star="on"] .contact__item,
+html[data-star="on"] .btn--ghost {
+  background: rgba(255, 255, 255, .08);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  border-color: rgba(255, 255, 255, .16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 8px 26px rgba(6, 8, 32, .35);
+}
+/* 悬停浮层（卡片下方舒展的介绍）也换玻璃底 */
+html[data-star="on"] .corner__entry p,
+html[data-star="on"] .corner__card p {
+  background: linear-gradient(rgba(34, 38, 88, .9), rgba(24, 26, 66, .82));
+  border-color: rgba(255, 255, 255, .18);
+  backdrop-filter: blur(12px) saturate(150%);
+  -webkit-backdrop-filter: blur(12px) saturate(150%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 10px 26px rgba(6, 8, 32, .4);
+}
+
 /* ---------- 导航（窄屏：顶栏） ---------- */
 .nav {
   position: fixed;
@@ -179,7 +253,15 @@ a { color: inherit; text-decoration: none; }
 .nav__links a:hover { color: var(--accent-deep); }
 .nav__links a:hover::after { transform: scaleX(1); transform-origin: left; }
 
-.theme-toggle {
+.nav__right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.theme-toggle,
+.star-toggle {
   border: none;
   cursor: pointer;
   width: 42px; height: 42px;
@@ -195,9 +277,32 @@ a { color: inherit; text-decoration: none; }
     background-color var(--speed) var(--ease);
 }
 
-.theme-toggle:hover { transform: translateY(-2px) rotate(-14deg); box-shadow: var(--shadow-hover); }
+.theme-toggle:hover,
+.star-toggle:hover { transform: translateY(-2px) rotate(-14deg); box-shadow: var(--shadow-hover); }
 .theme-toggle__icon { display: block; transition: transform 0.6s var(--ease); }
 html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
+
+.star-toggle__icon {
+  display: block;
+  transition: transform 0.5s var(--ease), color 0.4s var(--ease), text-shadow 0.4s var(--ease);
+}
+.star-toggle:hover .star-toggle__icon { transform: rotate(24deg) scale(1.12); }
+
+/* 星空模式开启：按钮亮起（深蓝紫底 + 金色星星 + 呼吸光晕） */
+html[data-star="on"] .star-toggle {
+  background: linear-gradient(135deg, #2a2a6e 0%, #4a3a8f 100%);
+  box-shadow: 0 0 12px rgba(122, 91, 191, .65), 0 0 22px rgba(255, 215, 110, .25);
+  animation: star-toggle-glow 2.6s ease-in-out infinite alternate;
+}
+html[data-star="on"] .star-toggle__icon {
+  color: #ffd76e;
+  text-shadow: 0 0 8px rgba(255, 215, 110, .9);
+}
+html[data-star="on"] .star-toggle:hover { transform: translateY(-2px) scale(1.05); }
+@keyframes star-toggle-glow {
+  from { box-shadow: 0 0 8px rgba(122, 91, 191, .5), 0 0 14px rgba(255, 215, 110, .15); }
+  to   { box-shadow: 0 0 16px rgba(122, 91, 191, .8), 0 0 30px rgba(255, 215, 110, .4); }
+}
 
 /* ---------- 导航（宽屏：GitHub 式左侧边栏，可伸缩） ---------- */
 @media (min-width: 900px) {
@@ -303,7 +408,11 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
     font-weight: 800;
   }
 
-  .theme-toggle { margin-top: auto; }
+  .nav__right {
+    margin-top: auto;
+    justify-content: center;
+    padding-top: 18px;
+  }
 
   /* ===== 收起状态：纯图标栏 ===== */
   body.nav-collapsed .nav__header {
@@ -326,7 +435,7 @@ html[data-theme="dark"] .theme-toggle__icon { transform: rotate(360deg); }
 
   body.nav-collapsed .nav__collapse-icon { transform: rotate(180deg); }
 
-  body.nav-collapsed .theme-toggle { align-self: center; }
+  body.nav-collapsed .nav__right { flex-direction: column; align-items: center; }
 }
 
 /* ---------- Hero ---------- */
