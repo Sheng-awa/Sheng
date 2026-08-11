@@ -23,14 +23,29 @@
   <!-- 特效画布：粉色鼠标轨迹 + 飘雪 -->
   <canvas class="fx-canvas" id="fxCanvas" aria-hidden="true"></canvas>
 
-  <!-- 桌宠：像素初音未来，沿底边巡逻（点它冒播放按钮去音乐页、拖拽甩飞、双击躲起来） -->
-  <div class="pet" id="pet" data-state="idle" data-surface="floor" aria-hidden="true">
-    <div class="pet__rot">
-      <div class="pet__flip">
-        <canvas class="pet__gl" id="petGL"></canvas>
-      </div>
+  <!-- 右下角占卜扑克牌：三张斜叠，悬停立起露字，点击翻牌占卜（六爻 / 一签 / 今日小幸运） -->
+  <div class="cards" id="fortuneCards" aria-label="占卜">
+    <div class="cards__bubble" id="cardsBubble" aria-hidden="true"></div>
+    <div class="cards__pile">
+      <button class="cards__card cards__card--lucky" data-card="lucky" aria-label="今日小幸运">
+        <span class="cards__face">
+          <span class="cards__suit">✿</span>
+          <span class="cards__label">幸运</span>
+        </span>
+      </button>
+      <button class="cards__card cards__card--qian" data-card="qian" aria-label="每日一签">
+        <span class="cards__face">
+          <span class="cards__suit">🎋</span>
+          <span class="cards__label">一签</span>
+        </span>
+      </button>
+      <button class="cards__card cards__card--liuyao" data-card="liuyao" aria-label="六爻金钱卦">
+        <span class="cards__face">
+          <span class="cards__suit">🪙</span>
+          <span class="cards__label">六爻</span>
+        </span>
+      </button>
     </div>
-    <div class="pet__zzz" id="petZzz" hidden>💤</div>
   </div>
 
   <!-- 导航（GitHub 风格：左侧 logo + 链接，右侧操作；宽屏为可伸缩侧边栏） -->
@@ -168,6 +183,5 @@
   </footer>
 
   <script src="assets/js/main.js"></script>
-  <script src="assets/js/pet.js"></script>
 </body>
 </html>

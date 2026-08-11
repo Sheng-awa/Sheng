@@ -705,110 +705,189 @@ html[data-theme="dark"] .corner__card p {
 .contact__label { font-weight: 800; width: 4.5em; flex: none; }
 .contact__value { color: var(--text-soft); font-size: 0.94rem; word-break: break-all; }
 
-/* ---------- 桌宠（像素史莱姆） ---------- */
-.pet {
+/* ---------- 右下角占卜扑克牌（三张斜叠，粉色为主，圆角软乎乎） ---------- */
+.cards {
   position: fixed;
-  left: 0; top: 0;
-  width: 96px;
-  z-index: 150;
-  cursor: grab;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  opacity: 0;
-  transition: opacity 0.8s var(--ease);
-  will-change: left, top;
-}
-
-.pet--on { opacity: 1; }
-.pet.is-drag { cursor: grabbing; }
-
-.pet.is-bye {
-  opacity: 0 !important;
-  transition: opacity 0.5s var(--ease) !important;
-}
-
-/* 朝向层：表面切换时平滑转身；自由飞行时关掉过渡由 JS 每帧驱动 */
-.pet__rot { transition: transform 0.45s var(--ease); }
-.pet--free .pet__rot { transition: none; }
-
-.pet__gl {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1;
-  image-rendering: pixelated;
-}
-
-/* 打瞌睡的 💤 */
-.pet__zzz {
-  position: absolute;
-  top: -14px; right: -6px;
-  font-size: 1rem;
-  opacity: 0;
+  right: 22px;
+  bottom: 22px;
+  z-index: 900;
   pointer-events: none;
-  transition: opacity 0.4s var(--ease);
 }
-
-.pet__zzz:not([hidden]) { opacity: 1; animation: pet-zzz 2.4s ease-in-out infinite; }
-
-@keyframes pet-zzz {
-  0%, 100% { transform: translateY(0) scale(0.85); opacity: 0.55; }
-  50%      { transform: translateY(-8px) scale(1.1); opacity: 1; }
-}
-
-/* 点击冒出的爱心 */
-.pet__heart {
-  position: absolute;
-  bottom: 80%;
-  color: var(--accent-deep);
-  font-size: 1rem;
+.cards__pile {
+  position: relative;
+  width: 148px;
+  height: 168px;
   pointer-events: none;
-  opacity: 0;
-  animation: pet-heart 1.1s var(--ease) forwards;
 }
-
-@keyframes pet-heart {
-  0%   { opacity: 0; transform: translateY(6px) scale(0.6); }
-  20%  { opacity: 1; }
-  100% { opacity: 0; transform: translate(var(--hx, 0), -44px) scale(1.25); }
-}
-
-/* 单击宠物冒出的播放按钮（点了去音乐页） */
-.pet__play {
+.cards__card {
   position: absolute;
-  bottom: calc(100% + 10px);
-  left: 50%;
-  width: 44px;
-  height: 44px;
+  width: 116px;
+  height: 158px;
   border: none;
-  border-radius: 50%;
-  padding: 0 0 2px 3px;             /* ▶ 字形偏左，微调视觉居中 */
-  background: linear-gradient(135deg, var(--accent), var(--lavender));
-  color: #fff;
-  font-size: 1.05rem;
-  line-height: 1;
+  border-radius: 22px;
   cursor: pointer;
-  box-shadow: var(--shadow-hover);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%) scale(0.5);
-  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
-}
-
-.pet__play.is-on {
-  opacity: 1;
+  font-family: inherit;
+  padding: 0;
   pointer-events: auto;
-  transform: translateX(-50%) scale(1);
-  animation: pet-play-bob 1.2s ease-in-out infinite;
+  background: linear-gradient(160deg, #ffe9f2 0%, #ffd3e4 60%, #fdc6dc 100%);
+  box-shadow: 0 8px 20px rgba(217, 79, 130, .28), 0 2px 6px rgba(217, 79, 130, .18);
+  transform-origin: 50% 100%;
+  transition: transform .4s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease;
+}
+.cards__card:hover { box-shadow: 0 14px 30px rgba(217, 79, 130, .4), 0 4px 10px rgba(217, 79, 130, .22); }
+/* 三张牌错位斜叠 */
+.cards__card--liuyao { right: 6px;  top: 0;    transform: rotate(7deg); }
+.cards__card--qian   { right: 20px; top: 10px; transform: rotate(-2deg); }
+.cards__card--lucky  { right: 32px; top: 24px; transform: rotate(-11deg); }
+/* 悬停：牌立起转正 + 微微上浮摇摆 */
+.cards__card--liuyao:hover { transform: rotate(2deg) translateY(-12px) scale(1.05); }
+.cards__card--qian:hover   { transform: rotate(0deg) translateY(-14px) scale(1.05); }
+.cards__card--lucky:hover  { transform: rotate(0deg) translateY(-14px) scale(1.05); }
+
+.cards__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 22px;
+  overflow: hidden;
+}
+/* 牌面花纹：四角小爱心 + 中间花型 */
+.cards__face::before, .cards__face::after {
+  content: "";
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(236, 111, 156, .35) 0 4px, transparent 5px),
+    radial-gradient(circle at 30% 30%, rgba(236, 111, 156, .25) 0 3px, transparent 4px),
+    radial-gradient(circle at 70% 30%, rgba(236, 111, 156, .25) 0 3px, transparent 4px),
+    radial-gradient(circle at 30% 70%, rgba(236, 111, 156, .25) 0 3px, transparent 4px),
+    radial-gradient(circle at 70% 70%, rgba(236, 111, 156, .25) 0 3px, transparent 4px);
+  opacity: .8;
+  transition: opacity .3s ease;
+}
+.cards__face::before { left: -14px; top: -14px; }
+.cards__face::after { right: -14px; bottom: -14px; }
+.cards__suit {
+  font-size: 1.9rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 3px rgba(217, 79, 130, .3));
+  transition: transform .35s cubic-bezier(.34, 1.56, .64, 1);
+}
+.cards__label {
+  font-size: 1.02rem;
+  color: #d94f82;
+  letter-spacing: .06em;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity .3s ease .05s, transform .35s cubic-bezier(.34, 1.56, .64, 1) .05s;
+}
+.cards__card:hover .cards__label,
+.cards__card:focus-visible .cards__label { opacity: 1; transform: translateY(0); }
+.cards__card:hover .cards__suit,
+.cards__card:focus-visible .cards__suit { transform: scale(1.15) rotate(-8deg); }
+
+/* 翻牌（点击跳转前） */
+.cards__card.is-flip {
+  animation: cards-flip .55s cubic-bezier(.4, 0, .2, 1) forwards;
+}
+@keyframes cards-flip {
+  0%   { transform: rotate(0) translateY(0) scale(1); }
+  35%  { transform: rotate(180deg) translateY(-34px) scale(1.12); }
+  100% { transform: rotate(360deg) translateY(-6px) scale(.92); opacity: .35; }
+}
+.cards__card.is-tada { animation: cards-tada .8s ease; }
+@keyframes cards-tada {
+  0%   { transform: rotate(0) scale(1); }
+  15%  { transform: rotate(-6deg) scale(1.08); }
+  30%  { transform: rotate(5deg) scale(1.1); }
+  45%  { transform: rotate(-3deg) scale(1.06); }
+  60%  { transform: rotate(2deg) scale(1.04); }
+  100% { transform: rotate(0) scale(1); }
 }
 
-@keyframes pet-play-bob {
-  0%, 100% { transform: translateX(-50%) translateY(0) scale(1); }
-  50%      { transform: translateX(-50%) translateY(-5px) scale(1.06); }
+/* 提示气泡 */
+.cards__bubble {
+  position: absolute;
+  right: 4px;
+  bottom: calc(100% + 10px);
+  max-width: 230px;
+  padding: 9px 14px;
+  border-radius: 16px;
+  font-size: .88rem;
+  line-height: 1.5;
+  color: #d94f82;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(217, 79, 130, .22);
+  opacity: 0;
+  transform: translateY(8px) scale(.92);
+  transform-origin: 90% 100%;
+  pointer-events: none;
+  transition: opacity .28s ease, transform .32s cubic-bezier(.34, 1.56, .64, 1);
+  z-index: 1;
+}
+.cards__bubble::after {
+  content: "";
+  position: absolute;
+  right: 26px;
+  bottom: -7px;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  transform: rotate(45deg);
+  border-radius: 3px;
+}
+.cards__bubble.is-on { opacity: 1; transform: translateY(0) scale(1); }
+.cards__bubble.is-lucky {
+  color: #6f5560;
+  background: #fff7fb;
+  border: 1.5px dashed rgba(236, 111, 156, .5);
+}
+.cards__bubble.is-lucky::after { background: #fff7fb; }
+
+/* 夜晚模式：牌面换深梅子底，花纹亮粉 */
+html[data-theme="dark"] .cards__card {
+  background: linear-gradient(160deg, #4a3448 0%, #3a2a3c 60%, #33232f 100%);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .45), 0 2px 6px rgba(0, 0, 0, .3);
+}
+html[data-theme="dark"] .cards__card:hover { box-shadow: 0 14px 30px rgba(0, 0, 0, .55); }
+html[data-theme="dark"] .cards__label { color: #ff9ec6; }
+html[data-theme="dark"] .cards__face::before,
+html[data-theme="dark"] .cards__face::after {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 158, 198, .4) 0 4px, transparent 5px),
+    radial-gradient(circle at 30% 30%, rgba(255, 158, 198, .28) 0 3px, transparent 4px),
+    radial-gradient(circle at 70% 30%, rgba(255, 158, 198, .28) 0 3px, transparent 4px),
+    radial-gradient(circle at 30% 70%, rgba(255, 158, 198, .28) 0 3px, transparent 4px),
+    radial-gradient(circle at 70% 70%, rgba(255, 158, 198, .28) 0 3px, transparent 4px);
+}
+html[data-theme="dark"] .cards__bubble { background: #2f2633; color: #f28bb4; }
+html[data-theme="dark"] .cards__bubble::after { background: #2f2633; }
+html[data-theme="dark"] .cards__bubble.is-lucky { background: #332a38; color: #e8d9e3; border-color: rgba(255, 158, 198, .4); }
+html[data-theme="dark"] .cards__bubble.is-lucky::after { background: #332a38; }
+
+/* 移动端：三张叠成一把，只留最上面一张可点 */
+@media (max-width: 640px) {
+  .cards { right: 12px; bottom: 12px; }
+  .cards__pile { width: 104px; height: 140px; }
+  .cards__card { width: 92px; height: 130px; border-radius: 18px; }
+  .cards__card--liuyao { right: 0; top: 0; transform: rotate(5deg); }
+  .cards__card--qian { right: 12px; top: 12px; transform: rotate(-1deg); }
+  .cards__card--lucky { right: 22px; top: 26px; transform: rotate(-9deg); }
+  .cards__card--liuyao:hover { transform: rotate(1deg) translateY(-10px) scale(1.05); }
+  .cards__card--qian:hover { transform: rotate(0) translateY(-10px) scale(1.05); }
+  .cards__card--lucky:hover { transform: rotate(0) translateY(-10px) scale(1.05); }
+  .cards__suit { font-size: 1.5rem; }
+  .cards__bubble { right: 0; font-size: .82rem; max-width: 200px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pet { display: none; }
+  .cards__card { transition: none; }
+  .cards__card.is-flip, .cards__card.is-tada { animation: none; }
 }
 
 /* ---------- 页脚 ---------- */
@@ -855,7 +934,6 @@ html[data-theme="dark"] .corner__card p {
   .nav__links a { font-size: 0.85rem; }
   .nav__logo { font-size: 1rem; }
   .section { padding: 80px 0; }
-  .pet { width: 72px; }
   .contact__label { width: auto; }
   .contact__item { flex-wrap: wrap; gap: 10px 14px; }
 }
@@ -1678,12 +1756,33 @@ body.music-page .focus-player {
 .page-veil--day { background: linear-gradient(165deg, #fff3f7 0%, #ffe7f0 55%, #ffd9e8 100%); }
 .page-veil--dusk { background: linear-gradient(165deg, #efe6fb 0%, #e4d5f6 55%, #d5c1f0 100%); }
 .page-veil--blush { background: linear-gradient(165deg, #ffd9e9 0%, #ffc3d9 55%, #e6d8f6 100%); }
+/* 去占卜屋 = 星夜纱幕（白天亮紫、夜晚深紫，星光点点） */
+.page-veil--mystic { background: linear-gradient(165deg, #e6dbfb 0%, #d3bef5 55%, #bda6ec 100%); }
+.page-veil--mystic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(2px 2px at 18% 30%, #8f76c9 0 2px, transparent 3px),
+    radial-gradient(1.5px 1.5px at 72% 18%, #8f76c9 0 2px, transparent 3px),
+    radial-gradient(2px 2px at 84% 62%, #8f76c9 0 2px, transparent 3px),
+    radial-gradient(1.5px 1.5px at 34% 72%, #8f76c9 0 2px, transparent 3px),
+    radial-gradient(1px 1px at 52% 44%, #8f76c9 0 1px, transparent 2px),
+    radial-gradient(1.5px 1.5px at 10% 58%, #8f76c9 0 2px, transparent 3px),
+    radial-gradient(1px 1px at 92% 84%, #8f76c9 0 1px, transparent 2px);
+  animation: mystic-twinkle 1.6s ease-in-out infinite alternate;
+}
+@keyframes mystic-twinkle {
+  from { opacity: .35; }
+  to { opacity: 1; }
+}
 .page-veil--enter { animation: page-veil-out 0.6s ease 0.08s both; }
 /* 夜晚模式：转场纱幕也换深色版（与主题联动） */
 html[data-theme="dark"] .page-veil--day { background: linear-gradient(165deg, #2b2230 0%, #241a28 55%, #1b1320 100%); }
 html[data-theme="dark"] .page-veil--dusk { background: linear-gradient(165deg, #2a2140 0%, #32284f 55%, #3b2f5c 100%); }
 html[data-theme="dark"] .page-veil--night { background: linear-gradient(165deg, #1b1f38 0%, #12142a 55%, #0d0f1e 100%); }
 html[data-theme="dark"] .page-veil--blush { background: linear-gradient(165deg, #3a2440 0%, #32203a 55%, #251b33 100%); }
+html[data-theme="dark"] .page-veil--mystic { background: linear-gradient(165deg, #1d1533 0%, #2a1d45 55%, #3a2757 100%); }
 @keyframes page-veil-out {
   from { opacity: 1; }
   to { opacity: 0; }

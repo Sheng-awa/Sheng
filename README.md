@@ -13,12 +13,12 @@ sheng/
 ├── games.html          # 对弈（单文件实现：左侧导航就地切换 + 中国象棋人机对战：规则引擎 + alpha-beta AI + Canvas 棋盘）
 ├── playlist.html       # 喜欢的歌单（单文件实现：长条列表 + 逐行滑入动画，点行跳 music.html?local=序号）
 ├── bookmarks.html      # 收藏夹（单文件实现：手帐风书签墙，BOOKMARKS 数组分组渲染，点卡片唤起 App / 打开网页）
+├── fortune.html        # 占卜屋（单文件实现：🪙 六爻金钱卦 + 🎋 每日一签，64 卦数据 + 软萌白话解读，双主题）
 ├── photo/              # 📷 照片源文件夹（原图直接塞这里）
 │   └── web/            #   压缩后的网页版——手帐书女装章正在用（p001~p004）
 ├── assets/
 │   ├── css/style.css   # 样式（主题变量、动画都在这里）
-│   ├── js/main.js      # 主题切换、滚动显现、花瓣、Canvas 特效、天气、名言气泡、导航收起
-│   ├── js/pet.js       # 桌宠：像素初音未来（巡逻/被甩翻跟头/打瞌睡）
+│   ├── js/main.js      # 主题切换、滚动显现、花瓣、Canvas 特效、天气、名言气泡、导航收起、右下角占卜扑克牌
 │   ├── js/music.js     # 播放器：列表/进度/音量（10% 默认+百分比）/频谱可视化/歌词/喜欢的歌曲
 │   ├── js/focus.js     # 专注页：动态壁纸舞台、雨丝萤火、底部 Dock、番茄钟、TODO 计划
 │   ├── music/local/    # 喜欢的歌曲（mp3 + lrc，登记在 music.js 的 LIKED_SONGS）
@@ -49,7 +49,7 @@ Vercel 直接把这个仓库关联进去即可，零配置（纯静态站点）�
 - **侧边栏默认收起**：左侧导航默认收起成窄条，点「«」展开；用户手动展开过会记住选择（localStorage `sheng-nav-collapsed`）
 - **相册**：首页「喜欢」栏目（不在小角落了）的相册卡进 `photos.html`——一本摊开的手帐书（**单文件实现**，HTML+CSS+JS 全内联，不依赖 style.css / main.js）：奶油色封面圆角、右侧+底部"书页堆叠"厚度（repeating-gradient 细边）、正中央书脊凹陷阴影，粉色方格纸背景。结构 = 目录页 + 女装 2 页 + 爱好 2 页 + 恋爱 1 页（虚线空相框"待拍摄"留白），**每个跨页都是单独手写的排版**（左拍立得右手写、双照片斜叠+箭头涂鸦、波浪"小河流"横跨两页、虚线备忘清单……），加页就仿照现有 `<section class="spread">` 手写一页。照片是拍立得样式（白边、caption/日期、随机倾斜、和纸胶带），点击开 lightbox（点空白/×/Esc 关闭）。**照片数据集中在 photos.html 里 script 顶部的 `PHOTOS` 数组**（id/章节/src/caption/date，现在是 picsum 占位图，换成自己的图片路径即可），HTML 里用 `<figure class="polaroid" data-photo="id">` 占位。翻页：书下方「← 上一页 / 下一页 →」圆角按钮（首末页置灰）+ 键盘左右方向键，**桌面端是真·翻书页**（绕书脊 3D 旋转 0.85s：翻动瞬间克隆出"静止左右半页 + 一张纸"，纸张正面贴旧右页、背面贴新左页，带书脊侧阴影，转完换回真页；移动端/减少动态偏好退化为滑动切换），右下角页码"第 N / 6 页"；目录贴纸可直达章节；`?p=页码` 可直接打开某页。**<768px 降级**：书本外壳/书脊/翻页按钮隐藏，所有页按顺序竖排平铺 + 手绘虚线分隔。字体是站酷快乐体（Google Fonts CDN）。手写字随时可改——每页的文字都是写死在 HTML 里的
 - **标签页图标**：替换 `assets/img/favicon-32.png` / `favicon-192.png` / `apple-touch-icon.png`（当前由 `好可爱.jpg` 裁剪脸部区域生成）
-- **桌宠**：像素初音未来，单击她头顶会冒出 ▶ 播放按钮（点了去 `music.html`），还能拖拽甩飞、双击躲起来。逻辑在 `assets/js/pet.js`，想去掉就删 `index.html` 里的 `#pet` 容器和对应 `<script>`。素材 `pet-miku.png` 取自 Canary Yellow 的 *Hatsune Miku Shimeji*（[shimejishop](https://shimejishop.com/free/hatsune-miku-shimeji/)，同人素材，初音未来 © Crypton Future Media，本站为个人非商业用途）
+- **右下角占卜扑克牌**（替换了原来的桌宠，`index.html` 固定右下角、最上层）：三张粉色手帐风扑克牌斜叠成一把（🪙 六爻 / 🎋 一签 / ✿ 幸运），悬停牌立起转正露字 + 冒气泡「算一卦」，点击翻牌动画后走 mystic 星夜纱幕进 `fortune.html?mode=liuyao|qian`；✿ 幸运牌不跳转，就地翻出按日期定的「今日小幸运」。深浅主题各一套牌面配色（白天浅粉 / 夜晚深梅子），移动端三张叠成一把缩小。样式在 `style.css` 的 `.cards*`，交互在 `main.js` 末尾；去掉就删 `index.html` 里的 `#fortuneCards` 容器（旧桌宠 `pet.js` 已停用，文件保留未引用）
 - **音乐 / 专注**：`music.html` 是全屏「听歌 + 专注」页——
   - **动态壁纸**：Wallpaper Engine 场景壁纸（workshop 2370927443，Lo-Fi 咖啡店）的浏览器重建。RePKG 解包 `scene.pkg` 取底图（Neon cafe，3840×2160）压缩为 `assets/img/scene/cafe.jpg`，再加霓虹灯光晕闪烁、暖色萤火、Canvas 雨丝和鼠标视差，逻辑在 `assets/js/focus.js`
   - **底部 Dock**：macOS 风功能栏（`.dock`），鼠标靠近图标会按距离平滑放大（magnification，`focus.js` 驱动）。4 个图标各弹一个面板（`.dock-panel`，dock 上方居中弹出，互斥开关、点外 / Esc 关闭）：🍅 专注、✏️ 计划、🎵 音乐、🖼️ 壁纸。左上角只剩回首页的头像
@@ -58,6 +58,10 @@ Vercel 直接把这个仓库关联进去即可，零配置（纯静态站点）�
   - **Todo 计划**：添加 / 点一下划线（未完成蓝点、完成绿勾 + 删除线）/ 悬停出 × 删除，存 localStorage `sheng-focus-todo`，刷新不丢
   - **更换壁纸**：Dock 的 🖼️ 弹层，当前界面切换不跳转；预设 4 张：Lo-Fi 咖啡店（雨丝+霓虹光晕）、日式房间昼/夜（Wallpaper Engine「Bunk」workshop 2134765860，RePKG 解包后 PIL 拼合背景与抽屉柜层）、水族馆画室（workshop 3038138638，RePKG 解包后按 `scene.json` 的 origin/scale 用 PIL 分层拼合——画板区域在原背景里是 alpha=0 透明镂空，要图层垫底、背景最后盖）。以后加壁纸：图丢进 `assets/img/scene/`，在 `assets/js/focus.js` 的 `WALLPAPERS` 数组加一项——每项可配 `glow`（霓虹光晕，位置按咖啡店调的）/ `rain`（雨丝）；选择存 localStorage `sheng-wallpaper`。注意配件显隐要用 `style.display` 而非 `hidden` 属性——全局 reset 的 `img{display:block}` 会盖掉 UA 的 `[hidden]` 样式
 - **页面过渡**：首页 ⇄ 各子页有纱幕过渡——去音乐页盖深紫蓝「入夜」、回首页盖粉白「天亮」、去歌单/碎碎念/收藏夹盖粉「blush」、去对弈盖「dusk」（白天浅紫 #efe6fb→#d5c1f0 / 夜晚深紫 #2a2140→#3b2f5c）；**夜晚模式下纱幕自动换成深色版**，进入页面时纱幕自动淡出（CSS `page-veil-out` 动画，不依赖 JS）。样式在 `.page-veil*`；离开拦截在 `main.js` 的 `leaveTo()`（暴露为 `window.shengLeave`，导航音乐链接和 pet.js 的 ▶ 按钮都走它）和 `focus.js`（头像回首页）；`prefers-reduced-motion` 时直接跳转无动画
+- **占卜**：首页右下角扑克牌浮层的入口进 `fortune.html`——**占卜屋**（单文件实现，手帐风）：
+  - **🪙 六爻金钱卦**：三枚 CSS 铜钱（外圆内方）逐爻翻滚动画，连掷 6 次自下而上装卦。字=2 点、花=3 点，和 6/7/8/9 = 老阴（动）/ 少阳 / 少阴 / 老阳（动）；本卦 + 动爻变卦都显示（卦名 + 周易卦辞 + 软萌白话解读 + 吉凶档）。**64 卦数据在 script 顶部 `HEXAGRAMS` 数组**（n 卦名 / c 六爻编码 1=阳 0=阴 / s 卦辞 / b 白话 / f 吉凶），改白话直接改 b 字段；「字/花」判定随机来自 `crypto` 级随机（`Math.random`），纯前端无后端
+  - **🎋 每日一签**：摇签筒动画（CSS 签筒 + 签弹出），按**当天日期**做种子 → 每天固定同一支签（第 N 签 · 卦名 + 签语 + 宜/忌），刷新不变，适合每天来一卦
+  - 深浅主题全适配；转场走 **mystic 星夜纱幕**（白天亮紫、夜晚压暗，带星光闪烁）；URL 参数 `?mode=liuyao` / `?mode=qian` 直达玩法（`&auto=1` 自动触发，仅供截图验证）
 - **碎碎念**：首页「小角落」的碎碎念卡进 `notes.html`——**便利贴墙**（单文件实现，方格纸粉底）：纯色便利贴小方块（黄/粉/蓝/绿/紫五色循环）、顶部胶条、随机微倾，桌面双列错落 / 移动单列，每条带心情 emoji + 日期，按数组顺序倒序排。**发新的一条 = 打开 notes.html，在 script 顶部 `NOTES` 数组【最上面】加一行 `{ d: '2026.07.28', m: '🎉', t: '正文（换行用 \n）' }`，push 上线**（m 可省略）。页面右下角还有**弹幕发射器（+ 号）**：访客留言会以弹幕形式飞过屏幕（随机弹道/速度/透明度 50%~90%，每 2.4s 一条循环放送），**可取色器自定义弹幕颜色**（选择存 `sheng-notes-dmk-color`，暖场弹幕是淡蓝色），**留言存在访客自己浏览器的 localStorage**（`sheng-notes-danmaku`，最多 60 条）——纯静态站没有后端，想全站共享留言需接 LeanCloud 等 BaaS（替换 script 里的 `dmStore` 即可）
 - **喜欢的歌单**：首页「喜欢」栏目的歌单卡进 `playlist.html`——**长条列表**（单文件实现）：每行 `歌名 -- 歌手 ······ ▶`，进入页面时逐行从左滑入；**点任意一行跳去 `music.html?local=序号` 自动播放**。数据在 script 顶部 `PLAY_SONGS` 数组（`{ name, artist, note }`），**与 music.js 的 `LIKED_SONGS` 保持同步**
 - **收藏夹**：首页「喜欢」栏目的收藏夹卡进 `bookmarks.html`——**手帐风书签墙**（单文件实现）：分类 + 小卡片，数据在 script 顶部 `BOOKMARKS` 数组（`{ cat, icon, name, url, desc }`，可选 `app` 手机协议 / `appWin` Windows 协议）。目前 2 个：**Bilibili**（手机唤起 App `bilibili://`，Windows 直接开网页）、**网易云音乐**（App 优先：Windows `orpheus://`、手机 `cloudmusic://`，3 秒无反应跳网页）；卡片右上角标签按行为显示「App / 网页」

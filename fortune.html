@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('sheng-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
+    })();
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>占卜屋 🔮 小圣的小窝</title>
+  <meta name="description" content="六爻金钱卦、每日一签——软乎乎的占卜小角落。" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/img/favicon-192.png" />
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet" />
+  <style>
+    /* ============================================================
+       占卜屋（fortune.html · 单文件实现）
+       手帐风占卜页：🪙 六爻金钱卦 + 🎋 每日一签
+       - 六爻：掷铜钱 6 次得本卦，动爻变卦；64 卦数据在 HEXAGRAMS
+       - 一签：按当天日期定签，每天同一支
+       - 转场：进入盖 mystic 纱幕自动淡出；返回盖 day 纱幕
+       ============================================================ */
+    :root {
+      --pink: #ec6f9c;
+      --pink-deep: #d94f82;
+      --lavender: #b9a7e6;
+      --lavender-deep: #8f76c9;
+      --ink: #6f5560;
+      --ink-soft: #a98f9c;
+      --card-bg: #ffffff;
+      --grid: rgba(238, 152, 188, .15);
+      --glow: rgba(185, 167, 230, .35);
+      --ease: cubic-bezier(.22, .61, .36, 1);
+      --coin-a: #f7c873;   /* 铜钱颜色 */
+      --coin-b: #e9b25f;
+    }
+    html[data-theme="dark"] {
+      --pink: #f28bb4;
+      --pink-deep: #ff9ec6;
+      --lavender: #a58fd6;
+      --lavender-deep: #c3aef0;
+      --ink: #e8d9e3;
+      --ink-soft: #b6a2b0;
+      --card-bg: #2f2633;
+      --grid: rgba(242, 139, 180, .10);
+      --glow: rgba(165, 143, 214, .22);
+      --coin-a: #e6b866;
+      --coin-b: #c99b4e;
+      --page-bg: #241b27;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      font-family: "ZCOOL KuaiLe", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background-color: var(--page-bg, #fdeef4);
+      background-image:
+        linear-gradient(var(--grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        radial-gradient(900px 420px at 50% -5%, var(--glow) 0%, transparent 70%);
+      background-size: 26px 26px, 26px 26px, auto;
+      padding: 76px 18px 72px;
+      overflow-x: hidden;
+    }
+
+    /* ---------- 顶部 ---------- */
+    .f-header {
+      max-width: 560px;
+      margin: 0 auto 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .f-title { font-size: 1.5rem; letter-spacing: .04em; }
+    .f-title small { display: block; font-size: .8rem; color: var(--ink-soft); font-weight: 400; margin-top: 2px; }
+    .f-back {
+      flex: none;
+      text-decoration: none;
+      color: var(--pink-deep);
+      border: 2px dashed var(--pink);
+      border-radius: 999px;
+      padding: 6px 16px;
+      font-size: .9rem;
+      background: var(--card-bg);
+      box-shadow: 0 4px 14px rgba(217, 79, 130, .12);
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+    }
+    .f-back:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(217, 79, 130, .22); }
+
+    .f-sub {
+      max-width: 560px;
+      margin: 0 auto 26px;
+      text-align: center;
+      color: var(--ink-soft);
+      font-size: .92rem;
+      line-height: 1.7;
+    }
+
+    /* ---------- 玩法切换 ---------- */
+    .f-tabs {
+      max-width: 560px;
+      margin: 0 auto 24px;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    .f-tab {
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1rem;
+      color: var(--ink-soft);
+      background: var(--card-bg);
+      border-radius: 999px;
+      padding: 9px 22px;
+      box-shadow: 0 4px 14px rgba(217, 79, 130, .10);
+      transition: all .3s var(--ease);
+    }
+    .f-tab:hover { transform: translateY(-2px); color: var(--pink-deep); }
+    .f-tab.is-on { background: linear-gradient(135deg, var(--pink), var(--lavender)); color: #fff; box-shadow: 0 6px 18px rgba(217, 79, 130, .30); }
+    .f-pane { display: none; }
+    .f-pane.is-on { display: block; }
+
+    /* ---------- 通用卡片 ---------- */
+    .f-card {
+      max-width: 560px;
+      margin: 0 auto 18px;
+      background: var(--card-bg);
+      border-radius: 26px;
+      padding: 22px 22px 24px;
+      box-shadow: 0 10px 30px rgba(217, 79, 130, .14);
+      position: relative;
+      transition: box-shadow .3s var(--ease);
+    }
+    .f-card--center { text-align: center; }
+
+    .f-enter {
+      opacity: 0;
+      transform: translateY(22px) rotate(-1deg);
+      animation: f-in .7s var(--ease) forwards;
+      animation-delay: var(--d, 0s);
+    }
+    @keyframes f-in {
+      to { opacity: 1; transform: translateY(0) rotate(0); }
+    }
+
+    /* ---------- 六爻：铜钱 ---------- */
+    .coins {
+      display: flex;
+      gap: 18px;
+      justify-content: center;
+      margin: 18px 0 10px;
+      min-height: 84px;
+      align-items: flex-end;
+    }
+    .coin {
+      position: relative;
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 34% 30%, var(--coin-a), var(--coin-b) 68%, #a97c3a);
+      box-shadow: 0 6px 12px rgba(169, 124, 58, .35), inset 0 2px 4px rgba(255, 255, 255, .55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #8a5f26;
+      font-size: 1.35rem;
+      font-weight: 800;
+      opacity: 0;
+      transform: scale(.4) translateY(30px);
+    }
+    .coin::after {
+      content: "";
+      position: absolute;
+      inset: 13px;
+      border-radius: 50%;
+      border: 3px solid rgba(138, 95, 38, .55);
+      box-shadow: inset 0 0 0 4px rgba(255, 255, 255, .25);
+    }
+    .coin.is-in { opacity: 1; transform: scale(1) translateY(0); transition: all .45s var(--ease); transition-delay: var(--cd, 0s); }
+    .coin.is-toss {
+      animation: coin-toss .75s var(--ease) forwards;
+    }
+    .coin.is-done { opacity: 1; transform: scale(1) translateY(0); }
+    @keyframes coin-toss {
+      0%   { transform: translateY(0) rotate(0) scale(1); }
+      30%  { transform: translateY(-58px) rotate(-200deg) scale(1.05); }
+      60%  { transform: translateY(6px) rotate(160deg) scale(.98); }
+      80%  { transform: translateY(-22px) rotate(-60deg) scale(1.02); }
+      100% { transform: translateY(0) rotate(0) scale(1); }
+    }
+    .coin.is-done[data-face="字"] { color: #7d5420; }
+    .coin.is-done[data-face="花"] { color: #a8443f; }
+
+    /* ---------- 六爻：卦象 ---------- */
+    .yao-wrap {
+      display: flex;
+      justify-content: center;
+      margin: 16px 0 6px;
+    }
+    .yao-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      background: rgba(238, 152, 188, .10);
+      border-radius: 20px;
+    }
+    .yao-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: scale(.7);
+    }
+    .yao-row.is-in { opacity: 1; transform: scale(1); transition: all .4s var(--ease); }
+    .yao-mark { font-size: .68rem; color: var(--ink-soft); width: 2em; text-align: right; }
+    .yao-bar { position: relative; width: 64px; height: 10px; border-radius: 999px; background: var(--pink-deep); }
+    .yao-row--yin .yao-bar { background: var(--lavender-deep); }
+    .yao-bar::after { content: ""; position: absolute; inset: 0; width: 50%; left: 25%; background: var(--card-bg); border-radius: 999px; }
+    .yao-row--yang .yao-bar::after { display: none; }
+    .yao-dong {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--pink);
+      box-shadow: 0 0 0 3px rgba(236, 111, 156, .25);
+    }
+    .yao-no { font-size: .68rem; color: var(--ink-soft); width: 2em; }
+
+    /* ---------- 结果卡 ---------- */
+    .gua-card {
+      background: linear-gradient(150deg, rgba(236, 111, 156, .08), rgba(185, 167, 230, .12));
+      border: 2px dashed rgba(236, 111, 156, .45);
+      border-radius: 22px;
+      padding: 16px 18px;
+      margin-top: 14px;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+    .gua-card::before {
+      content: "✿";
+      position: absolute;
+      right: -6px; top: -8px;
+      font-size: 3rem;
+      color: rgba(236, 111, 156, .14);
+      transform: rotate(18deg);
+    }
+    .gua-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .gua-name { font-size: 1.28rem; color: var(--pink-deep); }
+    .gua-luck {
+      font-size: .72rem;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: rgba(236, 111, 156, .16);
+      color: var(--pink-deep);
+    }
+    .gua-luck--hi { background: rgba(185, 167, 230, .22); color: var(--lavender-deep); }
+    .gua-text { font-size: 1rem; line-height: 1.75; margin-top: 8px; }
+    .gua-text b { color: var(--pink-deep); font-weight: 800; }
+    .gua-bai { margin-top: 8px; font-size: .94rem; color: var(--ink-soft); line-height: 1.75; }
+    .gua-dong {
+      margin-top: 10px;
+      font-size: .8rem;
+      color: var(--lavender-deep);
+      background: rgba(185, 167, 230, .14);
+      border-radius: 999px;
+      display: inline-block;
+      padding: 3px 12px;
+    }
+    .f-btn {
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1.05rem;
+      color: #fff;
+      background: linear-gradient(135deg, var(--pink), var(--lavender));
+      border-radius: 999px;
+      padding: 12px 34px;
+      box-shadow: 0 8px 22px rgba(217, 79, 130, .35);
+      transition: transform .25s var(--ease), box-shadow .25s var(--ease);
+    }
+    .f-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgba(217, 79, 130, .45); }
+    .f-btn:active { transform: translateY(0); }
+    .f-btn.is-busy { opacity: .6; pointer-events: none; }
+    .f-hint { margin-top: 12px; font-size: .8rem; color: var(--ink-soft); }
+
+    /* ---------- 每日一签 ---------- */
+    .qian-box {
+      position: relative;
+      width: 132px;
+      height: 168px;
+      margin: 12px auto 6px;
+    }
+    .qian-tube {
+      position: absolute;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 96px;
+      height: 128px;
+      background: linear-gradient(100deg, #e8b98a 0%, #d99d63 55%, #c98a4f 100%);
+      border-radius: 16px 16px 12px 12px;
+      box-shadow: 0 10px 20px rgba(201, 138, 79, .4), inset -10px 0 14px rgba(0, 0, 0, .12);
+      overflow: hidden;
+    }
+    .qian-tube::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(180deg, transparent 0 16px, rgba(120, 74, 28, .18) 16px 20px);
+    }
+    .qian-tube::after {
+      content: "";
+      position: absolute;
+      bottom: 0; left: 50%;
+      transform: translateX(-50%);
+      width: 118px; height: 34px;
+      background: linear-gradient(100deg, #e8b98a, #c98a4f);
+      border-radius: 50%;
+      box-shadow: 0 -3px 8px rgba(120, 74, 28, .25);
+    }
+    .qian-stick {
+      position: absolute;
+      bottom: 26px; left: 50%;
+      width: 10px;
+      height: 132px;
+      background: linear-gradient(180deg, #f7d9ac, #e0b27c);
+      border-radius: 5px;
+      transform: translateX(-50%) rotate(0deg);
+      transform-origin: bottom center;
+      box-shadow: 0 2px 4px rgba(120, 74, 28, .3);
+      transition: transform .6s var(--ease);
+    }
+    .qian-stick::before {
+      content: "🎋";
+      position: absolute;
+      top: -6px; left: 50%;
+      transform: translateX(-50%);
+      font-size: .9rem;
+    }
+    .qian-box.is-shake .qian-tube { animation: tube-shake .6s ease; }
+    .qian-box.is-shake .qian-stick { animation: stick-shake .6s ease; }
+    @keyframes tube-shake {
+      0%, 100% { transform: translateX(-50%) rotate(0); }
+      25% { transform: translateX(-52%) rotate(-4deg); }
+      50% { transform: translateX(-48%) rotate(4deg); }
+      75% { transform: translateX(-51%) rotate(-2deg); }
+    }
+    @keyframes stick-shake {
+      0%, 100% { transform: translateX(-50%) rotate(0); }
+      25% { transform: translateX(-50%) rotate(10deg); }
+      50% { transform: translateX(-50%) rotate(-8deg); }
+      75% { transform: translateX(-50%) rotate(5deg); }
+    }
+    .qian-box.is-out .qian-stick {
+      transform: translateX(30%) rotate(-24deg) translateY(-30px);
+    }
+    .qian-date { font-size: .82rem; color: var(--ink-soft); margin-top: 4px; }
+
+    /* ---------- 页脚 ---------- */
+    .f-foot { text-align: center; color: var(--ink-soft); font-size: .8rem; margin-top: 26px; }
+
+    /* ---------- 纱幕（进入淡出；返回时盖天亮色） ---------- */
+    .page-veil {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.38s ease;
+    }
+    .page-veil--mystic { background: linear-gradient(165deg, #e6dbfb 0%, #d3bef5 55%, #bda6ec 100%); }
+    html[data-theme="dark"] .page-veil--mystic { background: linear-gradient(165deg, #161226 0%, #241a3d 55%, #35214f 100%); }
+    .page-veil--mystic::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(2px 2px at 18% 30%, #8f76c9 0 2px, transparent 3px),
+        radial-gradient(1.5px 1.5px at 72% 18%, #8f76c9 0 2px, transparent 3px),
+        radial-gradient(2px 2px at 84% 62%, #8f76c9 0 2px, transparent 3px),
+        radial-gradient(1.5px 1.5px at 34% 72%, #8f76c9 0 2px, transparent 3px),
+        radial-gradient(1px 1px at 52% 44%, #8f76c9 0 1px, transparent 2px),
+        radial-gradient(1.5px 1.5px at 10% 58%, #8f76c9 0 2px, transparent 3px),
+        radial-gradient(1px 1px at 92% 84%, #8f76c9 0 1px, transparent 2px);
+      animation: mystic-twinkle 1.6s ease-in-out infinite alternate;
+    }
+    @keyframes mystic-twinkle {
+      from { opacity: .35; }
+      to { opacity: 1; }
+    }
+    .page-veil--day { background: linear-gradient(165deg, #fff3f7 0%, #ffe7f0 55%, #ffd9e8 100%); }
+    html[data-theme="dark"] .page-veil--day { background: linear-gradient(165deg, #2b2230 0%, #241a28 55%, #1b1320 100%); }
+    .page-veil--enter { animation: page-veil-out 0.6s ease 0.08s both; }
+    @keyframes page-veil-out {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .page-veil { transition: none; }
+      .page-veil--enter { animation: none; }
+      .f-enter, .coin, .yao-row { opacity: 1; transform: none; animation: none; }
+    }
+
+    @media (max-width: 560px) {
+      body { padding: 64px 12px 60px; }
+      .f-title { font-size: 1.25rem; }
+      .yao-bar { width: 52px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 进入纱幕：mystic 星夜，自动淡出 -->
+  <div class="page-veil page-veil--mystic page-veil--enter" aria-hidden="true"></div>
+
+  <header class="f-header">
+    <h1 class="f-title">🔮 小圣的占卜屋<small>心诚则灵 · 软乎乎地算一卦 ✿</small></h1>
+    <a class="f-back" href="index.html" id="backHome">回小窝</a>
+  </header>
+  <p class="f-sub f-enter" style="--d:.08s">问卦不语怪力乱神，只图一个心里安放的地方——算着玩，开心就好。</p>
+
+  <!-- 玩法切换 -->
+  <div class="f-tabs f-enter" style="--d:.14s">
+    <button class="f-tab is-on" data-tab="liuyao">🪙 六爻金钱卦</button>
+    <button class="f-tab" data-tab="qian">🎋 每日一签</button>
+  </div>
+
+  <!-- 🪙 六爻金钱卦 -->
+  <section class="f-pane is-on" id="pane-liuyao">
+    <div class="f-card f-card--center f-enter" style="--d:.2s">
+      <div class="coins" id="coins"></div>
+      <button class="f-btn" id="tossBtn">🪙 摇一卦</button>
+      <p class="f-hint" id="tossHint">三枚铜钱掷六次，从下往上装成一卦</p>
+    </div>
+
+    <div class="f-card f-enter" id="yaoCard" style="--d:.28s">
+      <div class="yao-wrap"><div class="yao-col" id="yaoCol"></div></div>
+      <div id="guaResult"></div>
+    </div>
+  </section>
+
+  <!-- 🎋 每日一签 -->
+  <section class="f-pane" id="pane-qian">
+    <div class="f-card f-card--center f-enter" style="--d:.2s">
+      <div class="qian-box" id="qianBox">
+        <div class="qian-stick" id="qianStick"></div>
+        <div class="qian-tube"></div>
+      </div>
+      <button class="f-btn" id="qianBtn">🎋 抽一支签</button>
+      <p class="qian-date" id="qianDate"></p>
+    </div>
+    <div class="f-card f-enter" id="qianResult" style="--d:.28s"></div>
+  </section>
+
+  <p class="f-foot">仅供娱乐 · 明天再来摇一摇 ✿</p>
+
+  <script>
+    (function () {
+      "use strict";
+
+      /* ============================================================
+         64 卦数据：n 卦名 / c 六爻编码(自上而下，1=阳 0=阴) / s 卦辞 / b 白话 / f 吉凶
+         ============================================================ */
+      var HEXAGRAMS = [
+        { n: "乾为天", c: "111111", f: "上上", s: "元亨利贞", b: "天行健——大大方方往前冲，你比自己想的更有劲头。" },
+        { n: "坤为地", c: "000000", f: "上上", s: "元亨，利牝马之贞", b: "厚德载物，温温柔柔也能托起整个世界。" },
+        { n: "水雷屯", c: "010100", f: "中平", s: "元亨利贞，勿用有攸往，利建侯", b: "万事开头难，像小苗破土，再努力顶一顶。" },
+        { n: "山水蒙", c: "001010", f: "中平", s: "亨。匪我求童蒙，童蒙求我", b: "蒙蒙的，不急——先问、再学，答案会自己走过来。" },
+        { n: "水天需", c: "010111", f: "中吉", s: "有孚，光亨，贞吉，利涉大川", b: "饭要一口一口吃，雨要等云慢慢来，等等就好。" },
+        { n: "天水讼", c: "111010", f: "下下", s: "有孚窒惕，中吉，终凶", b: "吵架赢不了温柔，退一步，海阔天空。" },
+        { n: "地水师", c: "000010", f: "中吉", s: "贞，丈人吉，无咎", b: "纪律和耐心是你的铠甲，队伍正在慢慢成形。" },
+        { n: "水地比", c: "010000", f: "中吉", s: "吉。原筮，元永贞，无咎", b: "亲亲的伙伴在身边，被惦记的感觉真好。" },
+        { n: "风天小畜", c: "011111", f: "中吉", s: "亨。密云不雨，自我西郊", b: "云厚了还没下雨，别急，聚一聚就下啦。" },
+        { n: "天泽履", c: "111110", f: "中吉", s: "履虎尾，不咥人，亨", b: "踩着老虎尾巴也能走稳——你比想象中勇敢。" },
+        { n: "地天泰", c: "000111", f: "上上", s: "小往大来，吉亨", b: "小往大来，好运正在敲你的门。" },
+        { n: "天地否", c: "111000", f: "下下", s: "否之匪人，不利君子贞", b: "坏天气会过去，别在低谷里搭帐篷。" },
+        { n: "天火同人", c: "111101", f: "中吉", s: "同人于野，亨，利涉大川", b: "和喜欢的人一起走，路会变短。" },
+        { n: "火天大有", c: "101111", f: "上上", s: "元亨", b: "满满一大捧的好运，接住！别害羞。" },
+        { n: "地山谦", c: "000001", f: "上上", s: "亨，君子有终", b: "弯弯腰的稻穗最饱满，你低调的样子闪闪发光。" },
+        { n: "雷地豫", c: "100000", f: "中吉", s: "利建侯行师", b: "开心的时候，连风都跟着你跳舞。" },
+        { n: "泽雷随", c: "110100", f: "中吉", s: "元亨利贞，无咎", b: "跟着心走，顺其自然，该来的都在路上。" },
+        { n: "山风蛊", c: "001011", f: "中平", s: "元亨，利涉大川", b: "旧的乱了就收拾收拾，重新出发更轻盈。" },
+        { n: "地泽临", c: "000110", f: "中吉", s: "元亨利贞", b: "好消息正在路上，它跑得有点慢，别急。" },
+        { n: "风地观", c: "011000", f: "中平", s: "盥而不荐，有孚颙若", b: "站高一点看看，你比自己以为的看得更远。" },
+        { n: "火雷噬嗑", c: "101100", f: "中平", s: "亨。利用狱", b: "有点硬骨头？咬一口——咔嚓，就解决了。" },
+        { n: "山火贲", c: "001101", f: "中平", s: "亨。小利有攸往", b: "给自己打扮打扮，今天也要漂漂亮亮的。" },
+        { n: "山地剥", c: "001000", f: "下下", s: "不利有攸往", b: "墙皮在掉也没关系，剥到底就是新的开始。" },
+        { n: "地雷复", c: "000100", f: "中吉", s: "亨。反复其道，七日来复", b: "一阳来复，春天在冻土底下悄悄冒头。" },
+        { n: "天雷无妄", c: "111100", f: "中吉", s: "元亨利贞，其匪正有眚", b: "不骗自己，就不会被骗——做个坦荡荡的小孩。" },
+        { n: "山天大畜", c: "001111", f: "中吉", s: "利贞，不家食吉", b: "厚积薄发，你攒的力气会一次性开花。" },
+        { n: "山雷颐", c: "001100", f: "中吉", s: "贞吉。观颐，自求口实", b: "好好吃饭，好好睡觉，身体在偷偷长力气。" },
+        { n: "泽风大过", c: "110011", f: "下下", s: "栋桡。利有攸往，亨", b: "担子重了点，但你能扛——撑住，别塌。" },
+        { n: "坎为水", c: "010010", f: "下下", s: "习坎，有孚，维心亨", b: "水坑一个接一个，小心走，但别停。" },
+        { n: "离为火", c: "101101", f: "中吉", s: "利贞，亨", b: "心是亮堂堂的，跟着光走就对啦。" },
+        { n: "泽山咸", c: "110001", f: "中吉", s: "亨，利贞，取女吉", b: "心动是不讲道理的，但也别太上头哦。" },
+        { n: "雷风恒", c: "100011", f: "中吉", s: "亨，无咎，利贞，利有攸往", b: "慢慢来，细水长流才是最长情的告白。" },
+        { n: "天山遁", c: "111001", f: "中平", s: "亨。小利贞", b: "该退就退，退一步不是输，是给未来让路。" },
+        { n: "雷天大壮", c: "100111", f: "中吉", s: "利贞", b: "气势正盛！但也记得别用力过猛。" },
+        { n: "火地晋", c: "101000", f: "中吉", s: "康侯用锡马蕃庶，昼日三接", b: "太阳升起来了，你的好日子也晒到了。" },
+        { n: "地火明夷", c: "000101", f: "中平", s: "利艰贞", b: "天黑了正好看星星，受伤的翅膀会再长。" },
+        { n: "风火家人", c: "011101", f: "中吉", s: "利女贞", b: "家里有灯火，心里就有底气。" },
+        { n: "火泽睽", c: "101110", f: "中平", s: "小事吉", b: "意见不一样也没关系，小火煮出好味道。" },
+        { n: "水山蹇", c: "010001", f: "下下", s: "利西南，不利东北，利见大人", b: "路滑、坡陡——但前面就是平地了。" },
+        { n: "雷水解", c: "100010", f: "中吉", s: "利西南，无所往，其来复吉", b: "雨过天晴，僵住的事会自己松开。" },
+        { n: "山泽损", c: "001110", f: "中吉", s: "有孚，元吉，无咎，可贞", b: "舍掉一点，才会腾出手来接更大的礼物。" },
+        { n: "风雷益", c: "011100", f: "上吉", s: "利有攸往，利涉大川", b: "好运在添柴，你只管往前走。" },
+        { n: "泽天夬", c: "110111", f: "中吉", s: "扬于王庭，孚号有厉", b: "该决断啦——咔嚓一声，干脆利落。" },
+        { n: "天风姤", c: "111011", f: "下下", s: "女壮，勿用取女", b: "突然的心动？先别急着许终身。" },
+        { n: "泽地萃", c: "110000", f: "中吉", s: "亨，王假有庙，利见大人", b: "大家聚在一起，热闹又有力量。" },
+        { n: "地风升", c: "000011", f: "中吉", s: "元亨，用见大人，南征吉", b: "芝麻开花节节高，往上走，别回头。" },
+        { n: "泽水困", c: "110010", f: "下下", s: "亨，贞，大人吉，无咎", b: "井枯了还有泉眼，困一下就醒啦。" },
+        { n: "水风井", c: "010011", f: "中吉", s: "改邑不改井，无丧无得", b: "稳住自己的节奏，别被外界搅浑。" },
+        { n: "泽火革", c: "110101", f: "中吉", s: "己日乃孚，元亨利贞", b: "旧的烧掉，新的才会亮——勇敢地变一变。" },
+        { n: "火风鼎", c: "101011", f: "上吉", s: "元吉，亨", b: "香气扑鼻的好东西正在锅里，别掀盖太早。" },
+        { n: "震为雷", c: "100100", f: "中吉", s: "亨。震来虩虩，笑言哑哑", b: "雷声大，雨点小——吓一跳而已，没事。" },
+        { n: "艮为山", c: "001001", f: "中平", s: "艮其背，不获其身，无咎", b: "停下来，安静一下，山会给你答案。" },
+        { n: "风山渐", c: "011001", f: "中吉", s: "女归吉，利贞", b: "小步小步走，稳的步子最远。" },
+        { n: "雷泽归妹", c: "100110", f: "下下", s: "征凶，无攸利", b: "急不得，缘分不是赶出来的。" },
+        { n: "雷火丰", c: "100101", f: "中吉", s: "亨，王假之，勿忧，宜日中", b: "阳光正好，丰收在望——别客气，好好享用。" },
+        { n: "火山旅", c: "101001", f: "下下", s: "小亨，旅贞吉", b: "在路上的人，口袋里装满了故事。" },
+        { n: "巽为风", c: "011011", f: "中吉", s: "小亨，利有攸往，利见大人", b: "像风一样软，像风一样钻——温柔的坚持。" },
+        { n: "兑为泽", c: "110110", f: "中吉", s: "亨，利贞", b: "今天适合大笑，笑声会传染。" },
+        { n: "风水涣", c: "011010", f: "中吉", s: "亨，王假有庙，利涉大川", b: "心里的冰化了，往前飘吧。" },
+        { n: "水泽节", c: "010110", f: "中平", s: "亨。苦节，不可贞", b: "刚刚好，就是最好——别贪杯哦。" },
+        { n: "风泽中孚", c: "011110", f: "中吉", s: "豚鱼吉，利涉大川，利贞", b: "心里装着信，脚下就稳了。" },
+        { n: "雷山小过", c: "100001", f: "中平", s: "亨，利贞，可小事，不可大事", b: "小事上柔软一点，大事上自有分寸。" },
+        { n: "水火既济", c: "010101", f: "上吉", s: "亨小，利贞，初吉终乱", b: "水满火旺，大功告成——别忘了收尾。" },
+        { n: "火水未济", c: "101010", f: "下下", s: "亨。小狐汔济，濡其尾，无攸利", b: "还没完！故事最好看的部分，正要开始。" }
+      ];
+
+      var YI = ["睡到自然醒", "吃块小蛋糕", "发一会儿呆", "打扮得漂漂亮亮", "给自己买朵花", "早点睡", "慢慢走路", "深呼吸十次"];
+      var JI = ["熬夜刷手机", "赶急赶慢", "冲动消费", "吃太辣", "生闷气", "说谎话", "过度纠结", "把烦恼憋在心里"];
+      var WEN = ["初", "二", "三", "四", "五", "上"];
+      var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      function findGua(code) {
+        for (var i = 0; i < HEXAGRAMS.length; i++) {
+          if (HEXAGRAMS[i].c === code) return HEXAGRAMS[i];
+        }
+        return HEXAGRAMS[0];
+      }
+
+      function byIndex(i) { return HEXAGRAMS[i % 64]; }
+
+      /* ---------- 页面转场 ---------- */
+      function leaveTo(url, mood) {
+        var veil = document.querySelector(".page-veil");
+        if (!veil || reduceMotion) { location.href = url; return; }
+        veil.classList.remove("page-veil--enter", "page-veil--mystic", "page-veil--day");
+        veil.classList.add("page-veil--" + mood);
+        void veil.offsetWidth;
+        veil.style.opacity = "1";
+        setTimeout(function () { location.href = url; }, 420);
+      }
+      document.getElementById("backHome").addEventListener("click", function (e) {
+        e.preventDefault();
+        leaveTo("index.html", "day");
+      });
+
+      /* ---------- 玩法切换 ---------- */
+      var tabs = Array.prototype.slice.call(document.querySelectorAll(".f-tab"));
+      tabs.forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          tabs.forEach(function (b) { b.classList.remove("is-on"); });
+          btn.classList.add("is-on");
+          document.getElementById("pane-liuyao").classList.toggle("is-on", btn.dataset.tab === "liuyao");
+          document.getElementById("pane-qian").classList.toggle("is-on", btn.dataset.tab === "qian");
+        });
+      });
+
+      /* ============================================================
+         🪙 六爻金钱卦
+         字 = 2 点，花 = 3 点；和 6/7/8/9 → 老阴/少阳/少阴/老阳
+         6、9 为动爻 → 变卦
+         ============================================================ */
+      var coinsEl = document.getElementById("coins");
+      var yaoCol = document.getElementById("yaoCol");
+      var tossBtn = document.getElementById("tossBtn");
+      var tossHint = document.getElementById("tossHint");
+      var guaResult = document.getElementById("guaResult");
+      var coinEls = [];
+      var busying = false;
+
+      function makeCoins(show) {
+        coinsEl.innerHTML = "";
+        coinEls = [];
+        for (var i = 0; i < 3; i++) {
+          var c = document.createElement("div");
+          c.className = "coin";
+          c.style.setProperty("--cd", (i * 0.09) + "s");
+          if (show) {
+            c.textContent = "✿";
+            c.classList.add("is-in");
+          }
+          coinsEl.appendChild(c);
+          coinEls.push(c);
+        }
+      }
+
+      function renderYao(list) {
+        yaoCol.innerHTML = "";
+        for (var i = 5; i >= 0; i--) {
+          var y = list[i];
+          var row = document.createElement("div");
+          row.className = "yao-row " + (y.yang ? "yao-row--yang" : "yao-row--yin");
+          var mark = document.createElement("span");
+          mark.className = "yao-mark";
+          mark.textContent = y.dong ? (y.yang ? "九" : "六") + "·" + WEN[i] : WEN[i];
+          var bar = document.createElement("div");
+          bar.className = "yao-bar";
+          row.appendChild(mark);
+          row.appendChild(bar);
+          if (y.dong) {
+            var d = document.createElement("span");
+            d.className = "yao-dong";
+            row.appendChild(d);
+          }
+          var no = document.createElement("span");
+          no.className = "yao-no";
+          no.textContent = "第" + (i + 1) + "爻";
+          row.appendChild(no);
+          yaoCol.appendChild(row);
+          if (!reduceMotion) {
+            (function (r, idx) {
+              setTimeout(function () { r.classList.add("is-in"); }, 240 + idx * 130);
+            })(row, i);
+          } else {
+            row.classList.add("is-in");
+          }
+        }
+      }
+
+      function guaCard(gua, title) {
+        var d = document.createElement("div");
+        d.className = "gua-card";
+        d.style.animation = "f-in .6s var(--ease) forwards";
+        d.style.opacity = "0";
+        var hi = gua.f === "上上" || gua.f === "上吉";
+        d.innerHTML =
+          '<div class="gua-head"><span class="gua-name">' + title + " · " + gua.n + '</span>' +
+          '<span class="gua-luck' + (hi ? " gua-luck--hi" : "") + '">' + gua.f + '</span></div>' +
+          '<p class="gua-text"><b>卦辞</b>　' + gua.s + "</p>" +
+          '<p class="gua-bai">✿ ' + gua.b + "</p>";
+        return d;
+      }
+
+      function tossAll() {
+        var result = [];
+        var list = [];
+        for (var t = 0; t < 6; t++) {
+          var p = 0;
+          var faces = [];
+          for (var k = 0; k < 3; k++) {
+            var face = Math.random() < 0.5 ? "字" : "花";
+            p += face === "字" ? 2 : 3;
+            faces.push(face);
+          }
+          result.push(faces);
+          list.push({ p: p });
+        }
+        return { faces: result, list: list };
+      }
+
+      function runToss() {
+        if (busying) return;
+        busying = true;
+        tossBtn.classList.add("is-busy");
+        tossHint.textContent = "……";
+        guaResult.innerHTML = "";
+
+        var data = tossAll();
+        makeCoins();
+        yaoCol.innerHTML = "";
+
+        var idx = 0;
+        function nextToss() {
+          if (idx >= 6) { finishToss(data); return; }
+          coinEls.forEach(function (c) {
+            c.classList.remove("is-in", "is-done", "is-toss");
+            c.textContent = "";
+          });
+          void coinsEl.offsetWidth;
+          coinEls.forEach(function (c) { c.classList.add("is-in"); });
+
+          setTimeout(function () {
+            coinEls.forEach(function (c) { c.classList.add("is-toss"); });
+            setTimeout(function () {
+              var faces = data.faces[idx];
+              for (var k = 0; k < 3; k++) {
+                coinEls[k].textContent = faces[k];
+                coinEls[k].setAttribute("data-face", faces[k]);
+                coinEls[k].classList.remove("is-toss");
+                coinEls[k].classList.add("is-done");
+              }
+              idx++;
+              setTimeout(nextToss, 520);
+            }, 760);
+          }, 420);
+        }
+        nextToss();
+      }
+
+      function finishToss(data) {
+        var yaoList = data.list.map(function (y) {
+          var yang, dong;
+          if (y.p === 9) { yang = true; dong = true; }        /* 老阳 动 */
+          else if (y.p === 6) { yang = false; dong = true; }   /* 老阴 动 */
+          else if (y.p === 7) { yang = true; dong = false; }   /* 少阳 */
+          else { yang = false; dong = false; }                 /* 少阴 */
+          return { yang: yang, dong: dong };
+        });
+
+        renderYao(yaoList);
+
+        var code = "", vcode = "";
+        for (var i = 5; i >= 0; i--) {  /* 初爻在最低位 */
+          code += yaoList[i].yang ? "1" : "0";
+          vcode += yaoList[i].dong ? (yaoList[i].yang ? "0" : "1") : (yaoList[i].yang ? "1" : "0");
+        }
+        var gua = findGua(code);
+        var vgua = findGua(vcode);
+        var dongCount = 0;
+        for (var j = 0; j < 6; j++) if (yaoList[j].dong) dongCount++;
+
+        setTimeout(function () {
+          var box = document.createElement("div");
+          box.appendChild(guaCard(gua, "本卦"));
+          if (dongCount > 0) {
+            var dongNote = document.createElement("div");
+            dongNote.className = "gua-dong";
+            dongNote.textContent = "⚡ " + dongCount + " 个动爻 · 看变卦更有意思";
+            box.appendChild(dongNote);
+            box.appendChild(guaCard(vgua, "变卦"));
+          } else {
+            var steady = document.createElement("div");
+            steady.className = "gua-dong";
+            steady.textContent = "✿ 六爻安静，本卦即所问";
+            box.appendChild(steady);
+          }
+          guaResult.appendChild(box);
+          tossHint.textContent = "心之所向，卦之所答——再摇一卦？";
+          busying = false;
+          tossBtn.classList.remove("is-busy");
+        }, 900);
+      }
+
+      tossBtn.addEventListener("click", runToss);
+      makeCoins(true);   /* 进页先躺着三枚铜钱，点了摇卦才动 */
+
+      /* ============================================================
+         🎋 每日一签：按当天日期做种子，每天固定同一支签
+         ============================================================ */
+      var qianBtn = document.getElementById("qianBtn");
+      var qianBox = document.getElementById("qianBox");
+      var qianDate = document.getElementById("qianDate");
+      var qianResult = document.getElementById("qianResult");
+
+      function daySeed() {
+        var now = new Date();
+        var s = String(now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate());
+        var h = 0;
+        for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 1000000007;
+        return h;
+      }
+
+      function showQian() {
+        var idx = daySeed() % 64;
+        var gua = byIndex(idx);
+        var yi = YI[idx % 8], ji = JI[(idx * 7 + 3) % 8];
+        var d = new Date();
+        var dateStr = d.getFullYear() + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getDate()).padStart(2, "0");
+
+        if (!reduceMotion) {
+          qianBox.classList.remove("is-out", "is-shake");
+          void qianBox.offsetWidth;
+          qianBox.classList.add("is-shake");
+        }
+        setTimeout(function () {
+          if (!reduceMotion) qianBox.classList.add("is-out");
+          qianResult.innerHTML = "";
+          var card = document.createElement("div");
+          card.className = "gua-card";
+          card.style.animation = "f-in .6s var(--ease) forwards";
+          card.style.opacity = "0";
+          var hi = gua.f === "上上" || gua.f === "上吉";
+          card.innerHTML =
+            '<div class="gua-head">' +
+            '<span class="gua-name">第 ' + (idx + 1) + " 签 · " + gua.n + '</span>' +
+            '<span class="gua-luck' + (hi ? " gua-luck--hi" : "") + '">' + gua.f + '</span>' +
+            "</div>" +
+            '<p class="gua-text"><b>签语</b>　' + gua.s + "</p>" +
+            '<p class="gua-bai">✿ ' + gua.b + "</p>" +
+            '<p class="gua-text" style="margin-top:10px"><b>宜</b>　' + yi + '<br /><b>忌</b>　' + ji + "</p>";
+          qianResult.appendChild(card);
+          qianDate.textContent = "抽于 " + dateStr + " · 今日之签，明日再来";
+        }, reduceMotion ? 0 : 620);
+      }
+
+      qianBtn.addEventListener("click", showQian);
+
+      /* ---------- 启动参数：?mode=liuyao / ?mode=qian 只定位玩法，不自动触发 ---------- */
+      var mode = (location.search.match(/mode=(\w+)/) || [])[1];
+      var auto = /auto=1/.test(location.search);   /* 截图验证用：自动触发一次 */
+      if (mode === "qian") {
+        document.getElementById("pane-liuyao").classList.remove("is-on");
+        document.getElementById("pane-qian").classList.add("is-on");
+        tabs[1].classList.add("is-on");
+        tabs[0].classList.remove("is-on");
+        if (auto) setTimeout(showQian, 300);
+      } else if (mode === "liuyao" && auto) {
+        setTimeout(runToss, 300);
+      }
+    })();
+  </script>
+</body>
+</html>

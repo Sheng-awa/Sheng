@@ -12,7 +12,8 @@
   function leaveTo(url, mood) {
     var veil = document.querySelector(".page-veil");
     if (!veil || reduceMotion) { location.href = url; return; }
-    veil.classList.remove("page-veil--enter", "page-veil--night", "page-veil--day");
+    veil.classList.remove("page-veil--enter", "page-veil--night", "page-veil--day",
+      "page-veil--dusk", "page-veil--blush", "page-veil--mystic");
     veil.classList.add("page-veil--" + mood);
     void veil.offsetWidth;   // 强制重排，让 transition 从 0 起步
     veil.style.opacity = "1";
@@ -55,6 +56,12 @@
     a.addEventListener("click", function (e) {
       e.preventDefault();
       leaveTo("bookmarks.html", "blush");
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('a[href^="fortune.html"]'), function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      leaveTo(a.getAttribute("href"), "mystic");
     });
   });
 
@@ -554,4 +561,103 @@
 
   tick();
   setInterval(tick, 60000);   /* 跨零点自动刷新 */
+})();
+
+/* ============================================================
+   右下角占卜扑克牌（三张斜叠）
+   - 悬停：牌立起露字 + 冒气泡「算一卦」
+   - 点击 六爻/一签：翻牌动画 → mystic 星夜纱幕 → fortune.html?mode=
+   - 点击 幸运：翻牌 → 气泡里吐出一条按日期定的今日小幸运
+   ============================================================ */
+(function () {
+  "use strict";
+
+  var wrap = document.getElementById("fortuneCards");
+  if (!wrap) return;
+
+  var bubble = document.getElementById("cardsBubble");
+  var cards = Array.prototype.slice.call(wrap.querySelectorAll(".cards__card"));
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var luckyShown = false;
+
+  /* 今日小幸运池子（按日期种子取一条，翻牌出） */
+  var LUCKIES = [
+    "今天的你像刚出炉的小蛋糕，软软的、香香的 ✿",
+    "宜发呆，忌皱眉——今天没有大事，只有小事可爱 ☁",
+    "抬头看看天吧，云朵今天为你排成了爱心",
+    "今天适合把喜欢的歌单从头到尾再听一遍 ♪",
+    "你笑起来的样子，比春光还轻",
+    "今天的运气藏在第三杯奶茶里，但只能喝半杯哦",
+    "路上如果遇到小猫，记得替它拍张照 📷",
+    "今天的幸运色是粉色——穿它！",
+    "把烦恼折成纸飞机，嗖地一下飞出去 ✈",
+    "今天会有人悄悄夸你可爱",
+    "适合整理房间，也适合整理心情",
+    "今日宜早睡，明天会是亮晶晶的一天",
+    "你种的小愿望，正在土里偷偷发芽 🌱",
+    "今天的分寸感：八分温柔，两分任性",
+    "天上有一颗星，今天为你亮着 ✨",
+    "慢慢吃饭，细细喝水，日子就是一口一口的甜",
+    "把衣柜里最喜欢的那件穿上身，好运就跟着来了",
+    "今天如果有人说你怪，记得那是可爱的意思",
+    "给自己放首歌，音量刚好，心情刚好",
+    "你认真发呆的样子，神明看见了都会笑"
+  ];
+
+  function dayLucky() {
+    var now = new Date();
+    var s = String(now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate());
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 1000000007;
+    return LUCKIES[h % LUCKIES.length];
+  }
+
+  function showBubble(text, lucky) {
+    bubble.textContent = text;
+    bubble.classList.toggle("is-lucky", !!lucky);
+    bubble.classList.add("is-on");
+  }
+  function hideBubble() {
+    if (luckyShown) return;
+    bubble.classList.remove("is-on");
+  }
+
+  /* 悬停提示 */
+  cards.forEach(function (c) {
+    c.addEventListener("pointerenter", function () {
+      showBubble("算一卦 ✿", false);
+    });
+    c.addEventListener("pointerleave", hideBubble);
+  });
+
+  /* 点击 */
+  cards.forEach(function (c) {
+    c.addEventListener("click", function () {
+      if (c.classList.contains("is-flip") || c.classList.contains("is-tada")) return;
+      var kind = c.getAttribute("data-card");
+      bubble.classList.remove("is-on");
+
+      if (kind === "lucky") {
+        c.classList.add("is-tada");
+        showBubble(dayLucky(), true);
+        luckyShown = true;
+        setTimeout(function () {
+          c.classList.remove("is-tada");
+          luckyShown = false;
+          bubble.classList.remove("is-on");
+        }, 6000);
+        return;
+      }
+
+      /* 六爻 / 一签：翻牌 → 盖星夜纱幕 → 跳转 */
+      if (!reduceMotion) {
+        c.classList.add("is-flip");
+        setTimeout(function () {
+          window.shengLeave("fortune.html?mode=" + (kind === "qian" ? "qian" : "liuyao"), "mystic");
+        }, 520);
+      } else {
+        window.shengLeave("fortune.html?mode=" + (kind === "qian" ? "qian" : "liuyao"), "mystic");
+      }
+    });
+  });
 })();
