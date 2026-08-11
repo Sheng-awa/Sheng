@@ -188,10 +188,15 @@
     html[data-theme="dark"] .wip-card p { color: #a28798; }
 
     /* ---------- 围棋 ---------- */
-    .go-wrap { position: relative; }
+    .go-wrap {
+      position: relative;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
     #goboard {
       display: block;
-      width: min(908px, calc(100vw - 340px));
+      width: 100%;
+      max-width: 908px;
       height: auto;
       border-radius: 14px;
       box-shadow: 0 10px 26px rgba(0, 0, 0, .25);
@@ -269,19 +274,12 @@
       background: linear-gradient(90deg, #2b2b2b var(--bw, 50%), #f2f2f2 0);
       transition: background .55s var(--ease);
     }
-    html[data-theme="dark"] .go-info__bar {
-      background: linear-gradient(90deg, #0c0c0c var(--bw, 50%), #d9d9d9 0);
-    }
-    /* 夜晚/星空下棋盘保持不透明：亮木描边 + 强阴影，和深色背景分开 */
-    html[data-theme="dark"] #goboard {
-      box-shadow: 0 0 0 2px rgba(217, 178, 106, .38), 0 14px 32px rgba(0, 0, 0, .5);
-    }
 
     /* ---------- 棋盘 + 侧栏放不下时纵向堆叠（棋盘不再被挤压"移动"） ---------- */
     @media (max-width: 1199px) {
       .xq-main { flex-direction: column; align-items: center; }
       .xq-side { width: min(560px, calc(100vw - 28px)); }
-      #goboard { width: min(908px, calc(100vw - 28px)); }
+      #goboard { max-width: 908px; }
     }
 
     /* ---------- 移动端：导航变顶栏 ---------- */
@@ -1821,12 +1819,9 @@ var N = GoEngine.N;
 
       function idx(x, y) { return y * N + x; }
 
-      /* 主题色（进入页面时读一次；星空/深色都是 dark） */
+      /* 主题色：棋盘永远保持白天配色（用户要求深浅/星空下不变） */
       function palette() {
-        var dark = document.documentElement.getAttribute('data-theme') === 'dark';
-        return dark
-          ? { wood: '#6b4e30', line: '#d9b26a', coord: 'rgba(217,178,106,.5)', star: '#d9b26a' }
-          : { wood: '#e6bd7a', line: '#6d4a26', coord: 'rgba(109,74,38,.45)', star: '#6d4a26' };
+        return { wood: '#e6bd7a', line: '#6d4a26', coord: 'rgba(109,74,38,.45)', star: '#6d4a26' };
       }
 
       function px(x) { return GOX + MARGIN + x * CELL; }
@@ -2115,9 +2110,9 @@ var N = GoEngine.N;
         updateButtons();
       }
 
-      /* AI 认输：目差粗算，落后太多且手数够多就不硬撑 */
+      /* AI 认输：目差粗算，落后很多且手数够多才认（更顽强） */
       function aiWantsResign() {
-        if (history.length < 36) return false;
+        if (history.length < 60) return false;
         var t = GoEngine.countTerritory(board);
         var bs = 0, ws = 0;
         for (var i = 0; i < board.length; i++) {
@@ -2128,7 +2123,7 @@ var N = GoEngine.N;
         var w = t.white + caps[2] + ws;
         var mine = turn === GoEngine.BLACK ? b : w;
         var theirs = turn === GoEngine.BLACK ? w : b;
-        if (theirs - mine >= 30) {
+        if (theirs - mine >= 45) {
           over = true;
           setStatus('小圣认输了 ✿ 你赢啦！', true);
           updateButtons();
@@ -2177,14 +2172,19 @@ var N = GoEngine.N;
         for (var y = 0; y < N; y++) {
           for (var x = 0; x < N; x++) {
             if (board[idx(x, y)] !== GoEngine.EMPTY) continue;
-            /* 候选剪枝：棋盘有子后只考虑战场附近（2 格内）和星位 */
+            /* 候选剪枝：棋盘有子后只考虑战场附近（3 格内）和星位，够近又不会缩成一团 */
+            var near3 = -1;
             if (hasStones) {
               var nearAny = false;
-              for (var dy = -2; dy <= 2 && !nearAny; dy++) {
-                for (var dx = -2; dx <= 2; dx++) {
+              for (var dy = -3; dy <= 3 && !nearAny; dy++) {
+                for (var dx = -3; dx <= 3; dx++) {
                   var ax = x + dx, ay = y + dy;
                   if (ax < 0 || ay < 0 || ax >= N || ay >= N) continue;
-                  if (board[idx(ax, ay)] !== GoEngine.EMPTY) { nearAny = true; break; }
+                  if (board[idx(ax, ay)] !== GoEngine.EMPTY) {
+                    nearAny = true;
+                    near3 = Math.max(Math.abs(dx), Math.abs(dy));
+                    break;
+                  }
                 }
               }
               var starish = (x === sh && y === sh) || (x === 3 && y === 3) ||
@@ -2198,8 +2198,8 @@ var N = GoEngine.N;
             var score = 0;
             score += r.captured.length * 900;                     /* 吃子 */
             var self = GoEngine.group(r.board, x, y);
-            score += Math.min(self.liberties, 6) * 14;            /* 落子后己组气数 */
-            var atariOpp = 0, ownAtari = 0, ownAtariSize = 0, ownDanger = 0, near = 0;
+            score += Math.min(self.liberties, 6) * 20;            /* 落子后己组气数（跑得开比窝着好） */
+            var atariOpp = 0, ownAtari = 0, ownAtariSize = 0, ownDanger = 0, near = 0, squeeze = 0;
             for (var d = 0; d < 4; d++) {
               var nx = x + dirs[d][0], ny = y + dirs[d][1];
               if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
@@ -2211,17 +2211,22 @@ var N = GoEngine.N;
                 if (nv === opp) atariOpp++;
                 else { ownAtari++; ownAtariSize = Math.max(ownAtariSize, g.stones.length); }
               } else if (nv === color && g.liberties === 2) {
-                ownDanger++;                                      /* 己组气紧（2 气），提前补强 */
+                ownDanger++;
+              } else if (nv === opp && g.liberties <= 3) {
+                squeeze++;                                        /* 对方组气紧，贴上去压迫 */
               }
             }
             score += atariOpp * 340;
             if (ownAtari) score += 420 + ownAtariSize * 26;
             score += ownDanger * 110;
-            var edgeD = Math.min(x, y, N - 1 - x, N - 1 - y);     /* 边角好围地 */
+            score += squeeze * 150;                               /* 压迫对方：堵气围杀 */
+            var edgeD = Math.min(x, y, N - 1 - x, N - 1 - y);
             if (edgeD === 0) score += 26;
             else if (edgeD === 1) score += 14;
             score += near * 10;
-            /* 1 层前瞻：我落子后对手在我附近能反吃的，扣掉一半分（不吃反吃的亏） */
+            /* 定式后展开：10~22 手时落子离最近棋子 2~3 格 → 布阵不缩角 */
+            if (hasStones && moveCount < 22 && near3 >= 2) score += 55;
+            /* 1 层前瞻：我落子后对手在我附近能反吃的，扣掉一半分 */
             if (r.captured.length > 0 || ownAtari || ownDanger) {
               score -= oppBestCapture(r.board, x, y, opp) * 0.5;
             }
