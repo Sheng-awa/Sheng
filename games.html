@@ -210,7 +210,7 @@
     /* 对局信息面板：两行（提子 / 实时胜率）黑左白右对称，底部胜率条 */
     .go-info {
       margin-top: 8px;
-      padding: 10px 12px 12px;
+      padding: 8px 10px 10px;
       background: rgba(236, 143, 178, .14);
       border-radius: 14px;
     }
@@ -218,36 +218,38 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
-      padding: 5px 0;
+      gap: 6px;
+      padding: 4px 0;
     }
     .go-info__row + .go-info__row { border-top: 1.5px dashed rgba(236, 143, 178, .35); }
     .go-info__tag {
-      font-size: .86rem;
+      font-size: .76rem;
       color: var(--ink, #6f5560);
       flex: none;
+      white-space: nowrap;
     }
     .go-bw {
       display: inline-flex;
       align-items: center;
-      gap: 9px;
+      gap: 6px;
     }
     .go-bw__side {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      font-size: .88rem;
+      gap: 4px;
+      font-size: .78rem;
       color: var(--ink, #6f5560);
+      white-space: nowrap;
     }
-    .go-bw__side b { font-weight: 800; font-size: .95rem; }
+    .go-bw__side b { font-weight: 800; font-size: .84rem; }
     .go-bw__sep {
       color: var(--ink, #6f5560);
       opacity: .55;
       font-weight: 800;
     }
     .go-bw__side i {
-      width: 12px;
-      height: 12px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       display: inline-block;
       flex: none;
