@@ -324,7 +324,7 @@
       </header>
       <div class="xq-main">
         <div class="xq-board-wrap go-wrap">
-          <canvas id="goboard" width="660" height="660"></canvas>
+          <canvas id="goboard" width="495" height="495"></canvas>
         </div>
         <aside class="xq-side">
           <div class="panel">
@@ -1593,7 +1593,7 @@
 
       /*GO-START*/
       var GoEngine = (function () {
-        var N = 19;
+        var N = 13;
         var EMPTY = 0, BLACK = 1, WHITE = 2;
         var DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
@@ -1716,8 +1716,8 @@
       function palette() {
         var dark = document.documentElement.getAttribute('data-theme') === 'dark';
         return dark
-          ? { wood: '#5b4632', line: '#c9a87a', coord: 'rgba(201,168,122,.45)', star: '#c9a87a' }
-          : { wood: '#e8c98a', line: '#7a5b3a', coord: 'rgba(122,91,58,.4)', star: '#7a5b3a' };
+          ? { wood: '#4a3826', line: '#d2a96e', coord: 'rgba(210,169,110,.5)', star: '#d2a96e' }
+          : { wood: '#e6bd7a', line: '#6d4a26', coord: 'rgba(109,74,38,.45)', star: '#6d4a26' };
       }
 
       function newGame() {
@@ -1765,8 +1765,13 @@
           ctx.lineTo(MARGIN + (N - 1) * CELL, MARGIN + i * CELL);
         }
         ctx.stroke();
-        /* 星位 */
-        var STARS = [[3, 3], [9, 3], [15, 3], [3, 9], [9, 9], [15, 9], [3, 15], [9, 15], [15, 15]];
+        /* 星位：四角星 + 天元（N≥19 时补四边星），随 N 自适应 */
+        var STARS = [[3, 3], [N - 4, 3], [3, N - 4], [N - 4, N - 4]];
+        if (N % 2 === 1) STARS.push([(N - 1) / 2, (N - 1) / 2]);
+        if (N >= 19) {
+          var sh = (N - 1) / 2;
+          STARS.push([sh, 3], [3, sh], [sh, N - 4], [N - 4, sh]);
+        }
         ctx.fillStyle = p.star;
         for (var s = 0; s < STARS.length; s++) {
           ctx.beginPath();
@@ -1786,7 +1791,7 @@
         for (var y = 0; y < N; y++) {
           for (var x = 0; x < N; x++) {
             var v = board[idx(x, y)];
-            if (v === EMPTY) continue;
+            if (v === GoEngine.EMPTY) continue;
             var removed = false;
             if (anim && anim.removing) {
               for (var r = 0; r < anim.removing.length; r++) {
@@ -1920,7 +1925,7 @@
         var candidates = 0;
         for (var y = 0; y < N; y++) {
           for (var x = 0; x < N; x++) {
-            if (board[idx(x, y)] !== EMPTY) continue;
+            if (board[idx(x, y)] !== GoEngine.EMPTY) continue;
             var r = GoEngine.play(board, x, y, color);
             if (!r) continue;
             var key = GoEngine.boardKey(r.board);
@@ -1933,7 +1938,7 @@
               var ny = y + (d === 2 ? 1 : d === 3 ? -1 : 0);
               if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
               var nv = board[idx(nx, ny)];
-              if (nv !== EMPTY) {
+              if (nv !== GoEngine.EMPTY) {
                 near++;
                 if (nv === opp) {
                   var g = GoEngine.group(board, nx, ny);
@@ -1944,8 +1949,9 @@
             score += atariOpp * 320;
             score += near * 8;                                   /* 贴近战场 */
             if (moveCount < 8) {
-              if ((x === 9 && y === 9) || (x === 3 && y === 3) || (x === 15 && y === 15) ||
-                  (x === 3 && y === 15) || (x === 15 && y === 3)) score += 40;   /* 开局星位/天元 */
+              var sh = (N - 1) / 2;
+              if ((x === sh && y === sh) || (x === 3 && y === 3) || (x === N - 4 && y === N - 4) ||
+                  (x === 3 && y === N - 4) || (x === N - 4 && y === 3)) score += 40;   /* 开局星位/天元 */
             }
             score += Math.random() * 60;                         /* 软软的不确定性 */
             candidates++;
