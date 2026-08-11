@@ -14,21 +14,23 @@
   var COLORS = ["#ffffff", "#ffd9e8", "#c9c2f2", "#ffd76e"];
   var state = null;
 
-  /* 注入一次样式（背景层 + 星星画布） */
+  /* 注入一次样式（背景层 + 星星画布，opacity 由 .is-on 控制 → 创建时先 0 后 1 才有淡入） */
   function cssOnce() {
     if (document.getElementById("sheng-star-style")) return;
     var s = document.createElement("style");
     s.id = "sheng-star-style";
     s.textContent =
-      ".sheng-star-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;" +
+      ".sheng-star-bg{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:0;" +
       "background:" +
       "radial-gradient(1200px 600px at 80% -10%, rgba(122,91,191,.5) 0%, transparent 60%)," +
       "radial-gradient(900px 500px at 10% 110%, rgba(47,80,150,.55) 0%, transparent 60%)," +
       "linear-gradient(180deg,#0d1133 0%,#141a44 55%,#1d1847 100%);" +
       "transition:opacity .6s ease;}" +
+      ".sheng-star-bg.is-on{opacity:1;}" +
       ".sheng-star-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;" +
       "z-index:180;opacity:0;transition:opacity .8s ease;}" +
-      "html[data-star=\"on\"] .sheng-star-canvas{opacity:1;}";
+      ".sheng-star-canvas.is-on{opacity:1;}" +
+      "@media (prefers-reduced-motion: reduce){.sheng-star-bg,.sheng-star-canvas{transition:none;}}";
     document.head.appendChild(s);
   }
 
@@ -43,6 +45,10 @@
     var canvas = document.createElement("canvas");
     canvas.className = "sheng-star-canvas";
     document.body.appendChild(canvas);
+    /* 先渲染一帧 opacity:0，再加 .is-on → transition 才有起点，背景/星星淡入 */
+    void bg.offsetWidth;
+    bg.classList.add("is-on");
+    canvas.classList.add("is-on");
     var ctx = canvas.getContext("2d");
     var dpr = Math.min(window.devicePixelRatio || 1, 2);
     var W = 0, H = 0;
@@ -121,9 +127,11 @@
       stop: function () {
         window.removeEventListener("resize", resize);
         cancelAnimationFrame(state.raf);
-        bg.remove();
-        canvas.remove();
         state = null;
+        /* 先淡出再移除 */
+        bg.classList.remove("is-on");
+        canvas.classList.remove("is-on");
+        setTimeout(function () { bg.remove(); canvas.remove(); }, 900);
       }
     };
     state.raf = requestAnimationFrame(frame);
