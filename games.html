@@ -5,6 +5,7 @@
     (function () {
       try {
         var t = localStorage.getItem('sheng-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        if (localStorage.getItem('sheng-star') === 'on') { t = 'dark'; document.documentElement.setAttribute('data-star', 'on'); }
         document.documentElement.setAttribute('data-theme', t);
       } catch (e) {}
     })();
@@ -2228,5 +2229,6 @@
       });
     })();
   </script>
+  <script src="assets/js/star.js"></script>
 </body>
 </html>

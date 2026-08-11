@@ -93,9 +93,11 @@
       root.setAttribute("data-star", "on");
       try { localStorage.setItem("sheng-star", "on"); } catch (e) {}
       applyTheme("dark");
+      if (window.shengStar) window.shengStar.ensure();
     } else {
       root.removeAttribute("data-star");
       try { localStorage.setItem("sheng-star", "off"); } catch (e) {}
+      if (window.shengStar) window.shengStar.destroy();
       var pref = saved ||
         (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
       applyTheme(pref);
@@ -698,90 +700,4 @@
       }
     });
   });
-})();
-
-/* ============================================================
-   星空模式引擎：Canvas 星星（闪烁 + 极慢漂移）
-   只在 html[data-star="on"] 时绘制；减动效偏好下静止不闪
-   ============================================================ */
-(function () {
-  "use strict";
-
-  var canvas = document.getElementById("starCanvas");
-  if (!canvas) return;
-
-  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  var ctx = canvas.getContext("2d");
-  var dpr = Math.min(window.devicePixelRatio || 1, 2);
-  var W = 0, H = 0;
-  var stars = [];
-  var COLORS = ["#ffffff", "#ffd9e8", "#c9c2f2", "#ffd76e"];
-
-  function resize() {
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = Math.round(W * dpr);
-    canvas.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    spawnStars();
-  }
-  window.addEventListener("resize", resize);
-
-  function spawnStars() {
-    stars = [];
-    var n = Math.min(130, Math.round((W * H) / 14000));  // 按视口面积自适应密度
-    for (var i = 0; i < n; i++) {
-      stars.push({
-        x: Math.random() * W,
-        y: Math.random() * H,
-        r: 0.5 + Math.random() * 2,
-        base: 0.35 + Math.random() * 0.45,
-        amp: 0.15 + Math.random() * 0.4,
-        phase: Math.random() * Math.PI * 2,
-        freq: 0.6 + Math.random() * 1.8,
-        drift: (Math.random() - 0.5) * 3,      // 极慢横向漂移 px/s
-        color: COLORS[(Math.random() * COLORS.length) | 0]
-      });
-    }
-  }
-
-  var last = performance.now();
-  function frame(now) {
-    var dt = Math.min(0.05, (now - last) / 1000);
-    last = now;
-    ctx.clearRect(0, 0, W, H);
-
-    if (document.documentElement.getAttribute("data-star") !== "on") {
-      requestAnimationFrame(frame);
-      return;
-    }
-
-    var secs = now / 1000;
-    for (var i = 0; i < stars.length; i++) {
-      var s = stars[i];
-      s.x += s.drift * dt;
-      if (s.x < -4) s.x = W + 4;
-      if (s.x > W + 4) s.x = -4;
-
-      var tw = reduceMotion ? 1
-        : Math.max(0.05, Math.min(1, s.base + Math.sin(secs * s.freq + s.phase) * s.amp));
-
-      ctx.globalAlpha = tw * 0.32;             // 柔光晕
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r * 2.2, 0, Math.PI * 2);
-      ctx.fillStyle = s.color;
-      ctx.fill();
-
-      ctx.globalAlpha = tw;                    // 星点本体
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fillStyle = s.color;
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-    requestAnimationFrame(frame);
-  }
-
-  resize();
-  requestAnimationFrame(frame);
 })();
