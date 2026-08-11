@@ -191,7 +191,7 @@
     .go-wrap { position: relative; }
     #goboard {
       display: block;
-      width: min(872px, calc(100vw - 300px));
+      width: min(908px, calc(100vw - 340px));
       height: auto;
       border-radius: 14px;
       box-shadow: 0 10px 26px rgba(0, 0, 0, .25);
@@ -275,6 +275,13 @@
     /* 夜晚/星空下棋盘保持不透明：亮木描边 + 强阴影，和深色背景分开 */
     html[data-theme="dark"] #goboard {
       box-shadow: 0 0 0 2px rgba(217, 178, 106, .38), 0 14px 32px rgba(0, 0, 0, .5);
+    }
+
+    /* ---------- 棋盘 + 侧栏放不下时纵向堆叠（棋盘不再被挤压"移动"） ---------- */
+    @media (max-width: 1199px) {
+      .xq-main { flex-direction: column; align-items: center; }
+      .xq-side { width: min(560px, calc(100vw - 28px)); }
+      #goboard { width: min(908px, calc(100vw - 28px)); }
     }
 
     /* ---------- 移动端：导航变顶栏 ---------- */
@@ -392,7 +399,7 @@
       </header>
       <div class="xq-main">
         <div class="xq-board-wrap go-wrap">
-          <canvas id="goboard" width="872" height="660"></canvas>
+          <canvas id="goboard" width="908" height="660"></canvas>
         </div>
         <aside class="xq-side">
           <div class="panel">
@@ -1783,10 +1790,10 @@
       /*GO-END*/
 var N = GoEngine.N;
       var MARGIN = 33, CELL = 33, R = 14.5;
-      var SIDE = 106;                       /* 两侧棋盒区宽 */
+      var SIDE = 124;                       /* 两侧棋盒区宽（碗半径 46，保证不碰最外列棋子） */
       var GOX = SIDE + MARGIN;              /* 棋盘区起点 x */
       var SIZE = (N - 1) * CELL + MARGIN * 2;   /* 660（19 路） */
-      var CW = SIDE * 2 + SIZE;             /* 872 */
+      var CW = SIDE * 2 + SIZE;             /* 908 */
       var CH = SIZE;                        /* 660 */
       var BOX_B = { x: SIDE / 2, y: CH / 2 };        /* 黑盒在左 */
       var BOX_W = { x: CW - SIDE / 2, y: CH / 2 };   /* 白盒在右 */
@@ -2130,11 +2137,38 @@ var N = GoEngine.N;
         return false;
       }
 
-      /* AI：启发式选点（吃子 > 逃子救大块 > 叫吃 > 气数 > 边角 > 近处扩展 + 小随机） */
+      /* 对手最大反吃评估：模拟对手在我落子点 2 格内找最狠的应对 */
+      function oppBestCapture(simBoard, x0, y0, opp) {
+        var best = 0;
+        for (var dy = -2; dy <= 2; dy++) {
+          for (var dx = -2; dx <= 2; dx++) {
+            var ax = x0 + dx, ay = y0 + dy;
+            if (ax < 0 || ay < 0 || ax >= N || ay >= N) continue;
+            if (board[idx(ax, ay)] !== GoEngine.EMPTY) continue;   /* 用当前 board 判空即可（simBoard 同构） */
+            var r = GoEngine.play(simBoard, ax, ay, opp);
+            if (!r) continue;
+            if (seenKeys.indexOf(GoEngine.boardKey(r.board)) >= 0) continue;
+            var gain = r.captured.length * 900;
+            if (gain > best) best = gain;
+          }
+        }
+        return best;
+      }
+
+      /* AI：开局定式 + 启发式（吃子 > 逃子救大块 > 叫吃 > 气数 > 边角）+ 1 层前瞻防反吃 */
+      var OPENING = [[9, 9], [3, 3], [15, 15], [3, 15], [15, 3], [3, 9], [15, 9], [9, 3], [9, 15]];
       function findAiMove() {
         var color = turn;
         var opp = 3 - color;
         var moveCount = history.length;
+        /* 开局定式：前 9 手按星位/小目顺序下，开局有模有样 */
+        if (moveCount < OPENING.length) {
+          var op = OPENING[moveCount];
+          if (board[idx(op[0], op[1])] === GoEngine.EMPTY) {
+            var r0 = GoEngine.play(board, op[0], op[1], color);
+            if (r0 && seenKeys.indexOf(GoEngine.boardKey(r0.board)) < 0) return [op[0], op[1]];
+          }
+        }
         var best = null, bestScore = -1e9;
         var candidates = 0;
         var dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -2143,7 +2177,7 @@ var N = GoEngine.N;
         for (var y = 0; y < N; y++) {
           for (var x = 0; x < N; x++) {
             if (board[idx(x, y)] !== GoEngine.EMPTY) continue;
-            /* 候选剪枝：棋盘有子后只考虑战场附近（2 格内）和星位，落子集中才能围地吃子 */
+            /* 候选剪枝：棋盘有子后只考虑战场附近（2 格内）和星位 */
             if (hasStones) {
               var nearAny = false;
               for (var dy = -2; dy <= 2 && !nearAny; dy++) {
@@ -2162,10 +2196,10 @@ var N = GoEngine.N;
             var key = GoEngine.boardKey(r.board);
             if (seenKeys.indexOf(key) >= 0) continue;
             var score = 0;
-            score += r.captured.length * 900;                     /* 吃子，多多益善 */
+            score += r.captured.length * 900;                     /* 吃子 */
             var self = GoEngine.group(r.board, x, y);
-            score += Math.min(self.liberties, 6) * 14;            /* 落子后自己组气越足越好 */
-            var atariOpp = 0, ownAtari = 0, ownAtariSize = 0, near = 0;
+            score += Math.min(self.liberties, 6) * 14;            /* 落子后己组气数 */
+            var atariOpp = 0, ownAtari = 0, ownAtariSize = 0, ownDanger = 0, near = 0;
             for (var d = 0; d < 4; d++) {
               var nx = x + dirs[d][0], ny = y + dirs[d][1];
               if (nx < 0 || ny < 0 || nx >= N || ny >= N) continue;
@@ -2173,21 +2207,25 @@ var N = GoEngine.N;
               if (nv === GoEngine.EMPTY) continue;
               near++;
               var g = GoEngine.group(board, nx, ny);
-              if (g.liberties !== 1) continue;
-              if (nv === opp) atariOpp++;
-              else { ownAtari++; ownAtariSize = Math.max(ownAtariSize, g.stones.length); }
+              if (g.liberties === 1) {
+                if (nv === opp) atariOpp++;
+                else { ownAtari++; ownAtariSize = Math.max(ownAtariSize, g.stones.length); }
+              } else if (nv === color && g.liberties === 2) {
+                ownDanger++;                                      /* 己组气紧（2 气），提前补强 */
+              }
             }
-            score += atariOpp * 340;                              /* 叫吃对方 */
-            if (ownAtari) score += 420 + ownAtariSize * 26;       /* 逃子：救被叫吃的自己（越大块越值） */
+            score += atariOpp * 340;
+            if (ownAtari) score += 420 + ownAtariSize * 26;
+            score += ownDanger * 110;
             var edgeD = Math.min(x, y, N - 1 - x, N - 1 - y);     /* 边角好围地 */
             if (edgeD === 0) score += 26;
             else if (edgeD === 1) score += 14;
-            score += near * 10;                                   /* 贴邻战场 */
-            if (moveCount < 8) {
-              if ((x === sh && y === sh) || (x === 3 && y === 3) || (x === N - 4 && y === N - 4) ||
-                  (x === 3 && y === N - 4) || (x === N - 4 && y === 3)) score += 40;
+            score += near * 10;
+            /* 1 层前瞻：我落子后对手在我附近能反吃的，扣掉一半分（不吃反吃的亏） */
+            if (r.captured.length > 0 || ownAtari || ownDanger) {
+              score -= oppBestCapture(r.board, x, y, opp) * 0.5;
             }
-            score += Math.random() * 26;                          /* 软软的不确定性（比之前稳一点） */
+            score += Math.random() * 22;
             candidates++;
             if (score > bestScore) { bestScore = score; best = [x, y]; }
           }
