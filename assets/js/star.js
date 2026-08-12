@@ -38,31 +38,38 @@
     return p;   /* 0=新月 0.5=满月 */
   }
 
-  /* 月相月亮：亮圆 + destination-out 挖阴影（盈月右亮、亏月左亮） */
+  /* 月相月亮：亮圆 + destination-out 挖阴影（盈月右亮、亏月左亮）；光晕裁剪进月面，不会出现"圈" */
   function drawMoon(canvas, phase) {
-    var S = 110, r = 42, cx = S / 2, cy = S / 2;
+    var S = 110, r = 40, cx = S / 2, cy = S / 2;
     var ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, S, S);
     var bright = phase <= 0.5 ? phase * 2 : (1 - phase) * 2;   /* 0..1 */
-    if (bright < 0.06) {
-      /* 新月：只有一圈淡淡的轮廓 */
-      ctx.strokeStyle = "rgba(255, 236, 200, .28)";
-      ctx.lineWidth = 1.5;
+    if (bright < 0.04) {
+      /* 新月：几乎看不见，只留一丁点暖意 */
+      ctx.fillStyle = "rgba(255, 236, 200, .05)";
       ctx.beginPath();
       ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.stroke();
+      ctx.fill();
       return;
     }
     ctx.save();
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = "#ffe9b8";
+    /* 柔和光晕（只在月面内，月牙就是光晕的形状） */
+    var glow = ctx.createRadialGradient(cx, cy, r * 0.45, cx, cy, r * 1.5);
+    glow.addColorStop(0, "rgba(255, 236, 190, .5)");
+    glow.addColorStop(1, "rgba(255, 236, 190, 0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, S, S);
+    /* 月面 */
+    ctx.fillStyle = "#ffecc0";
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
+    /* 挖阴影（地球影） */
     if (bright < 0.995) {
-      var off = (1 - bright) * r * 2;
+      var off = (1 - bright) * r * 2.1;
       var dir = phase <= 0.5 ? -1 : 1;
       ctx.globalCompositeOperation = "destination-out";
       ctx.beginPath();
@@ -70,10 +77,37 @@
       ctx.fill();
     }
     ctx.restore();
-    ctx.fillStyle = "rgba(255, 233, 184, .35)";
-    ctx.beginPath();
-    ctx.arc(cx, cy, r * 1.18, 0, Math.PI * 2);
-    ctx.fill();
+  }
+
+  /* 云朵：Canvas 径向渐变圆堆叠（蓬松柔和，不是圆点拼接） */
+  function makeCloudCanvas(w, h, dark) {
+    var cv = document.createElement("canvas");
+    cv.className = "sheng-star-cloud";
+    var cw = w * 2, ch = h * 2;
+    cv.width = cw;
+    cv.height = ch;
+    var c = cv.getContext("2d");
+    var base = dark ? "58,72,125" : "255,255,255";
+    function puff(px, py, rr, a) {
+      var g = c.createRadialGradient(px, py, rr * 0.12, px, py, rr);
+      g.addColorStop(0, "rgba(" + base + "," + a + ")");
+      g.addColorStop(1, "rgba(" + base + ",0)");
+      c.fillStyle = g;
+      c.beginPath();
+      c.arc(px, py, rr, 0, Math.PI * 2);
+      c.fill();
+    }
+    /* 底部压扁的一排 */
+    puff(cw * 0.5, ch * 0.74, ch * 0.44, 0.55);
+    puff(cw * 0.3, ch * 0.8, ch * 0.34, 0.5);
+    puff(cw * 0.7, ch * 0.8, ch * 0.34, 0.5);
+    /* 上部蓬松层 */
+    puff(cw * 0.44, ch * 0.52, ch * 0.34, 0.55);
+    puff(cw * 0.62, ch * 0.5, ch * 0.38, 0.55);
+    puff(cw * 0.33, ch * 0.64, ch * 0.27, 0.5);
+    puff(cw * 0.7, ch * 0.62, ch * 0.29, 0.5);
+    puff(cw * 0.52, ch * 0.34, ch * 0.26, 0.46);
+    return cv;
   }
 
   /* ---------- 注入一次样式（背景层 + 天气剧场 + 星星画布） ---------- */
@@ -92,14 +126,8 @@
       /* 月相月亮 */
       ".sheng-star-moon{position:absolute;top:6vh;right:6vw;width:110px;height:110px;" +
       "filter:drop-shadow(0 0 26px rgba(255,233,184,.4));}" +
-      /* 云朵：圆角拼接半透明，慢慢飘 */
-      ".sheng-star-cloud{position:absolute;border-radius:999px;" +
-      "background:rgba(255,255,255,.16);}" +
-      ".sheng-star-cloud::before,.sheng-star-cloud::after{content:'';position:absolute;" +
-      "border-radius:999px;background:inherit;}" +
-      ".sheng-star-cloud::before{width:52%;height:68%;left:14%;top:-34%;}" +
-      ".sheng-star-cloud::after{width:42%;height:56%;right:10%;top:-18%;}" +
-      ".sheng-star-cloud.is-dark{background:rgba(40,48,90,.4);}" +
+      /* 云朵：canvas 渐变堆叠，慢慢飘 */
+      ".sheng-star-cloud{position:absolute;}" +
       ".sheng-star-cloud.is-drift{animation:sheng-cloud-drift linear infinite;}" +
       "@keyframes sheng-cloud-drift{from{transform:translateX(-18vw)}to{transform:translateX(112vw)}}" +
       /* 雾纱 */
@@ -141,8 +169,8 @@
 
     var kind = weather || "clear";
     var makeCloud = function (w, h, top, delay, dur, dark) {
-      var c = document.createElement("div");
-      c.className = "sheng-star-cloud is-drift" + (dark ? " is-dark" : "");
+      var c = makeCloudCanvas(w, h, dark);
+      c.classList.add("is-drift");
       c.style.width = w + "px";
       c.style.height = h + "px";
       c.style.top = top;
@@ -152,13 +180,13 @@
     };
 
     if (kind === "cloudy") {
-      makeCloud(150, 42, "12%", 8, 58, false);
-      makeCloud(110, 32, "30%", 30, 46, false);
-      makeCloud(130, 38, "56%", 52, 66, false);
+      makeCloud(180, 70, "10%", 8, 58, false);
+      makeCloud(130, 52, "30%", 30, 46, false);
+      makeCloud(160, 62, "54%", 52, 66, false);
     } else if (kind === "overcast") {
-      makeCloud(170, 46, "10%", 5, 70, true);
-      makeCloud(140, 40, "26%", 26, 60, true);
-      makeCloud(160, 44, "48%", 48, 74, true);
+      makeCloud(200, 78, "8%", 5, 70, true);
+      makeCloud(160, 62, "24%", 26, 60, true);
+      makeCloud(190, 74, "46%", 48, 74, true);
       var ov = document.createElement("div");
       ov.className = "sheng-star-overlay";
       bg.appendChild(ov);
@@ -167,16 +195,17 @@
       fog.className = "sheng-star-fog";
       bg.appendChild(fog);
     } else if (kind === "rain" || kind === "storm") {
-      makeCloud(180, 50, "6%", 6, 80, true);
-      makeCloud(150, 44, "24%", 34, 72, true);
-      makeCloud(170, 48, "52%", 60, 84, true);
+      makeCloud(210, 82, "4%", 6, 80, true);
+      makeCloud(170, 66, "22%", 34, 72, true);
+      makeCloud(190, 74, "50%", 60, 84, true);
       if (kind === "storm") {
         var fl = document.createElement("div");
         fl.className = "sheng-star-flash";
         bg.appendChild(fl);
       }
     } else if (kind === "clear") {
-      makeCloud(100, 30, "18%", 20, 64, false);
+      makeCloud(200, 76, "10%", 12, 60, false);
+      makeCloud(120, 48, "38%", 40, 50, false);
     }
   }
 
